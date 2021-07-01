@@ -9,15 +9,11 @@
  * file that was distributed with this source code.
  */
 
-namespace Symfony\UX\LiveComponent;
-
-use Symfony\UX\TwigComponent\ComponentInterface;
+namespace Symfony\UX\LiveComponent\Tests\Fixture\Component;
 
 /**
  * @author Kevin Bond <kevinbond@gmail.com>
- *
- * @experimental
  */
-interface LiveComponentInterface extends ComponentInterface
+final class Component5 extends Component4
 {
 }
