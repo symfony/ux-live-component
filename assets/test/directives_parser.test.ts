@@ -220,7 +220,7 @@ describe('directives parser', () => {
             }).toThrow('The modifier "debounce()" does not support multiple arguments.')
         });
 
-        it('modifier cannot have multiple arguments', () => {
+        it('modifier cannot have named arguments', () => {
             expect(() => {
                 parseDirectives('debounce(foo=bar)|save');
             }).toThrow('The modifier "debounce()" does not support named arguments.')

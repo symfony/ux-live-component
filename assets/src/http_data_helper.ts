@@ -5,7 +5,7 @@
  * Likely there is an easier way to do this with no duplication.
  */
 
-const buildFormKey = function(key, parentKeys) {
+const buildFormKey = function(key: string, parentKeys: string[]) {
     let fieldName = '';
     [...parentKeys, key].forEach((name) => {
         fieldName += fieldName ? `[${name}]` : name;
@@ -14,12 +14,7 @@ const buildFormKey = function(key, parentKeys) {
     return fieldName;
 }
 
-/**
- * @param {FormData} formData
- * @param {Object} data
- * @param {Array} parentKeys
- */
-const addObjectToFormData = function(formData, data, parentKeys) {
+const addObjectToFormData = function(formData: FormData, data: any, parentKeys: string[]) {
     // todo - handles files
     Object.keys(data).forEach((key => {
         let value = data[key];
@@ -37,7 +32,7 @@ const addObjectToFormData = function(formData, data, parentKeys) {
         }
 
         // handle embedded objects
-        if (typeof value === 'object' && value !== null) {
+        if (typeof value === 'object') {
             addObjectToFormData(formData, value, [...parentKeys, key]);
 
             return;
@@ -47,12 +42,7 @@ const addObjectToFormData = function(formData, data, parentKeys) {
     }));
 }
 
-/**
- * @param {URLSearchParams} searchParams
- * @param {Object} data
- * @param {Array} parentKeys
- */
-const addObjectToSearchParams = function(searchParams, data, parentKeys) {
+const addObjectToSearchParams = function(searchParams: URLSearchParams, data: any, parentKeys: string[]) {
     Object.keys(data).forEach((key => {
         let value = data[key];
 
@@ -70,7 +60,7 @@ const addObjectToSearchParams = function(searchParams, data, parentKeys) {
         }
 
         // handle embedded objects
-        if (typeof value === 'object' && value !== null) {
+        if (typeof value === 'object') {
             addObjectToSearchParams(searchParams, value, [...parentKeys, key]);
 
             return;
@@ -84,7 +74,7 @@ const addObjectToSearchParams = function(searchParams, data, parentKeys) {
  * @param {Object} data
  * @return {FormData}
  */
-export function buildFormData(data) {
+export function buildFormData(data: any): FormData {
     const formData = new FormData();
 
     addObjectToFormData(formData, data, []);
@@ -97,7 +87,7 @@ export function buildFormData(data) {
  * @param {Object} data
  * @return {URLSearchParams}
  */
-export function buildSearchParams(searchParams, data) {
+export function buildSearchParams(searchParams: URLSearchParams, data: any): URLSearchParams {
     addObjectToSearchParams(searchParams, data, []);
 
     return searchParams;

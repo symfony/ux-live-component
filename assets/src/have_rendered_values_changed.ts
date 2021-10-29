@@ -1,4 +1,4 @@
-export function haveRenderedValuesChanged(originalDataJson, currentDataJson, newDataJson) {
+export function haveRenderedValuesChanged(originalDataJson: string, currentDataJson: string, newDataJson: string) {
     /*
      * Right now, if the "data" on the new value is different than
      * the "original data" on the child element, then we force re-render

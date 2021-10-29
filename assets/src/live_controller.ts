@@ -1,13 +1,25 @@
 import { Controller } from '@hotwired/stimulus';
 import morphdom from 'morphdom';
-import { parseDirectives } from './directives_parser';
+import { parseDirectives, Directive } from './directives_parser';
 import { combineSpacedArray } from './string_utils';
 import { buildFormData, buildSearchParams } from './http_data_helper';
 import { setDeepData, doesDeepPropertyExist, normalizeModelName } from './set_deep_data';
-import './polyfills';
 import { haveRenderedValuesChanged } from './have_rendered_values_changed';
 
-const DEFAULT_DEBOUNCE = '150';
+interface LiveResponseData {
+    redirect_url?: string,
+    html?: string,
+    data?: any,
+}
+
+interface ElementLoadingDirectives {
+    element: HTMLElement,
+    directives: Directive[]
+}
+
+declare const Turbo: any;
+
+const DEFAULT_DEBOUNCE = 150;
 
 export default class extends Controller {
     static values = {
@@ -22,17 +34,22 @@ export default class extends Controller {
         debounce: Number,
     }
 
+    readonly urlValue!: string;
+    dataValue!: any;
+    readonly csrfValue!: string;
+    readonly debounceValue!: number;
+
     /**
      * The current "timeout" that's waiting before a model update
      * triggers a re-render.
      */
-    renderDebounceTimeout = null;
+    renderDebounceTimeout: number | null = null;
 
     /**
      * The current "timeout" that's waiting before an action should
      * be taken.
      */
-    actionDebounceTimeout = null;
+    actionDebounceTimeout: number | null = null;
 
     /**
      * A stack of all current AJAX Promises for re-rendering.
@@ -41,11 +58,11 @@ export default class extends Controller {
      */
     renderPromiseStack = new PromiseStack();
 
-    pollingIntervals = [];
+    pollingIntervals: NodeJS.Timer[] = [];
 
     isWindowUnloaded = false;
 
-    originalDataJSON;
+    originalDataJSON = '{}';
 
     initialize() {
         this.markAsWindowUnloaded = this.markAsWindowUnloaded.bind(this);
@@ -57,6 +74,11 @@ export default class extends Controller {
         // hide "loading" elements to begin with
         // This is done with CSS, but only for the most basic cases
         this._onLoadingFinish();
+
+        // helps typescript be sure this is an HTMLElement, not just Element
+        if (!(this.element instanceof HTMLElement)) {
+            throw new Error('Invalid Element Type');
+        }
 
         if (this.element.dataset.poll !== undefined) {
             this._initiatePolling(this.element.dataset.poll);
@@ -87,19 +109,19 @@ export default class extends Controller {
     /**
      * Called to update one piece of the model
      */
-    update(event) {
+    update(event: any) {
         const value = event.target.value;
 
         this._updateModelFromElement(event.target, value, true);
     }
 
-    updateDefer(event) {
+    updateDefer(event: any) {
         const value = event.target.value;
 
         this._updateModelFromElement(event.target, value, false);
     }
 
-    action(event) {
+    action(event: any) {
         // using currentTarget means that the data-action and data-action-name
         // must live on the same element: you can't add
         // data-action="click->live#action" on a parent element and
@@ -140,7 +162,7 @@ export default class extends Controller {
                         }
                         break;
                     case 'debounce': {
-                        const length = modifier.value ? modifier.value : DEFAULT_DEBOUNCE;
+                        const length: number = modifier.value ? parseInt(modifier.value) : DEFAULT_DEBOUNCE;
 
                         // clear any pending renders
                         if (this.actionDebounceTimeout) {
@@ -148,7 +170,7 @@ export default class extends Controller {
                             this.actionDebounceTimeout = null;
                         }
 
-                        this.actionDebounceTimeout = setTimeout(() => {
+                        this.actionDebounceTimeout = window.setTimeout(() => {
                             this.actionDebounceTimeout = null;
                             _executeAction();
                         }, length);
@@ -173,12 +195,15 @@ export default class extends Controller {
         this._makeRequest(null);
     }
 
-    _updateModelFromElement(element, value, shouldRender) {
+    _updateModelFromElement(element: HTMLElement, value: string, shouldRender: boolean) {
         const model = element.dataset.model || element.getAttribute('name');
 
         if (!model) {
-            const clonedElement = element.cloneNode();
-            clonedElement.innerHTML = '';
+            const clonedElement = (element.cloneNode());
+            // helps typescript know this is an HTMLElement
+            if (!(clonedElement instanceof HTMLElement)) {
+                throw new Error('cloneNode() produced incorrect type');
+            }
 
             throw new Error(`The update() method could not be called for "${clonedElement.outerHTML}": the element must either have a "data-model" or "name" attribute set to the model name.`);
         }
@@ -203,7 +228,7 @@ export default class extends Controller {
      * @param {string|null} extraModelName Another model name that this might go by in a parent component.
      * @param {Object} options Options include: {bool} dispatch
      */
-    $updateModel(model, value, shouldRender = true, extraModelName = null, options = {}) {
+    $updateModel(model: string, value: any, shouldRender = true, extraModelName: string | null = null, options: any = {}) {
         const directives = parseDirectives(model);
         if (directives.length > 1) {
             throw new Error(`The data-model="${model}" format is invalid: it does not support multiple directives (i.e. remove any spaces).`);
@@ -264,21 +289,22 @@ export default class extends Controller {
             // clear any pending renders
             this._clearWaitingDebouncedRenders();
 
-            this.renderDebounceTimeout = setTimeout(() => {
+            this.renderDebounceTimeout = window.setTimeout(() => {
                 this.renderDebounceTimeout = null;
                 this.$render();
             }, this.debounceValue || DEFAULT_DEBOUNCE);
         }
     }
 
-    _makeRequest(action) {
-        let [url, queryString] = this.urlValue.split('?');
+    _makeRequest(action: string|null) {
+        const splitUrl = this.urlValue.split('?');
+        let [url] = splitUrl
+        const [, queryString] = splitUrl;
         const params = new URLSearchParams(queryString || '');
 
-        const fetchOptions = {
-            headers: {
-                'Accept': 'application/vnd.live-component+json',
-            },
+        const fetchOptions: RequestInit = {};
+        fetchOptions.headers = {
+            'Accept': 'application/vnd.live-component+json',
         };
 
         if (action) {
@@ -321,7 +347,7 @@ export default class extends Controller {
      *
      * @private
      */
-    _processRerender(data) {
+    _processRerender(data: LiveResponseData) {
         // check if the page is navigating away
         if (this.isWindowUnloaded) {
             return;
@@ -329,11 +355,10 @@ export default class extends Controller {
 
         if (data.redirect_url) {
             // action returned a redirect
-            /* global Turbo */
             if (typeof Turbo !== 'undefined') {
                 Turbo.visit(data.redirect_url);
             } else {
-                window.location = data.redirect_url;
+                window.location.href = data.redirect_url;
             }
 
             return;
@@ -348,6 +373,10 @@ export default class extends Controller {
         // "diffs" the elements, any loading differences will not cause
         // elements to appear different unnecessarily
         this._onLoadingFinish();
+
+        if (!data.html) {
+            throw new Error('Missing html key on response JSON');
+        }
 
         // merge/patch in the new HTML
         this._executeMorphdom(data.html);
@@ -371,7 +400,7 @@ export default class extends Controller {
         this._handleLoadingToggle(false);
     }
 
-    _handleLoadingToggle(isLoading) {
+    _handleLoadingToggle(isLoading: boolean) {
         this._getLoadingDirectives().forEach(({ element, directives }) => {
             // so we can track, at any point, if an element is in a "loading" state
             if (isLoading) {
@@ -387,15 +416,12 @@ export default class extends Controller {
     }
 
     /**
-     * @param {Element} element
-     * @param {boolean} isLoading
-     * @param {Directive} directive
      * @private
      */
-    _handleLoadingDirective(element, isLoading, directive) {
+    _handleLoadingDirective(element: HTMLElement, isLoading: boolean, directive: Directive) {
         const finalAction = parseLoadingAction(directive.action, isLoading);
 
-        let loadingDirective = null;
+        let loadingDirective: (() => void);
 
         switch (finalAction) {
             case 'show':
@@ -437,8 +463,8 @@ export default class extends Controller {
                         break;
                     }
 
-                    const delayLength = modifier.value || 200;
-                    setTimeout(() => {
+                    const delayLength = modifier.value ? parseInt(modifier.value) : 200;
+                    window.setTimeout(() => {
                         if (element.hasAttribute('data-live-is-loading')) {
                             loadingDirective();
                         }
@@ -460,9 +486,13 @@ export default class extends Controller {
     }
 
     _getLoadingDirectives() {
-        const loadingDirectives = [];
+        const loadingDirectives: ElementLoadingDirectives[] = [];
 
         this.element.querySelectorAll('[data-loading]').forEach((element => {
+            if (!(element instanceof HTMLElement)) {
+                throw new Error('Invalid Element Type');
+            }
+
             // use "show" if the attribute is empty
             const directives = parseDirectives(element.dataset.loading || 'show');
 
@@ -475,19 +505,19 @@ export default class extends Controller {
         return loadingDirectives;
     }
 
-    _showElement(element) {
+    _showElement(element: HTMLElement) {
         element.style.display = 'inline-block';
     }
 
-    _hideElement(element) {
+    _hideElement(element: HTMLElement) {
         element.style.display = 'none';
     }
 
-    _addClass(element, classes) {
+    _addClass(element: HTMLElement, classes: string[]) {
         element.classList.add(...combineSpacedArray(classes));
     }
 
-    _removeClass(element, classes) {
+    _removeClass(element: HTMLElement, classes: string[]) {
         element.classList.remove(...combineSpacedArray(classes));
 
         // remove empty class="" to avoid morphdom "diff" problem
@@ -496,13 +526,13 @@ export default class extends Controller {
         }
     }
 
-    _addAttributes(element, attributes) {
+    _addAttributes(element: Element, attributes: string[]) {
         attributes.forEach((attribute) => {
             element.setAttribute(attribute, '');
         })
     }
 
-    _removeAttributes(element, attributes) {
+    _removeAttributes(element: Element, attributes: string[]) {
         attributes.forEach((attribute) => {
             element.removeAttribute(attribute);
         })
@@ -513,14 +543,19 @@ export default class extends Controller {
         return Object.values(this.dataValue).join(',').length < 1500;
     }
 
-    _executeMorphdom(newHtml) {
+    _executeMorphdom(newHtml: string) {
         // https://stackoverflow.com/questions/494143/creating-a-new-dom-element-from-an-html-string-using-built-in-dom-methods-or-pro#answer-35385518
-        function htmlToElement(html) {
+        function htmlToElement(html: string): Node {
             const template = document.createElement('template');
             html = html.trim();
             template.innerHTML = html;
 
-            return template.content.firstChild;
+            const child = template.content.firstChild;
+            if (!child) {
+                throw new Error('Child not found');
+            }
+
+            return child;
         }
 
         const newElement = htmlToElement(newHtml);
@@ -532,8 +567,9 @@ export default class extends Controller {
                 }
 
                 // avoid updating child components: they will handle themselves
-                if (fromEl.hasAttribute('data-controller')
-                    && fromEl.getAttribute('data-controller').split(' ').indexOf('live') !== -1
+                const controllerName = fromEl.hasAttribute('data-controller') ? fromEl.getAttribute('data-controller') : null;
+                if (controllerName
+                    && controllerName.split(' ').indexOf('live') !== -1
                     && fromEl !== this.element
                     && !this._shouldChildLiveElementUpdate(fromEl, toEl)
                 ) {
@@ -551,7 +587,7 @@ export default class extends Controller {
         this.isWindowUnloaded = true;
     };
 
-    _initiatePolling(rawPollConfig) {
+    _initiatePolling(rawPollConfig: string) {
         const directives = parseDirectives(rawPollConfig || '$render');
 
         directives.forEach((directive) => {
@@ -561,7 +597,7 @@ export default class extends Controller {
                 switch (modifier.name) {
                     case 'delay':
                         if (modifier.value) {
-                            duration = modifier.value;
+                            duration = parseInt(modifier.value);
                         }
 
                          break;
@@ -574,8 +610,8 @@ export default class extends Controller {
         })
     }
 
-    _startPoll(actionName, duration) {
-        let callback;
+    _startPoll(actionName: string, duration: number) {
+        let callback: () => void;
         if (actionName.charAt(0) === '$') {
             callback = () => {
                 this[actionName]();
@@ -586,12 +622,13 @@ export default class extends Controller {
             }
         }
 
-        this.pollingIntervals.push(setInterval(() => {
+        const timer = setInterval(() => {
             callback();
-        }, duration));
+        }, duration);
+        this.pollingIntervals.push(timer);
     }
 
-    _dispatchEvent(name, payload = null, canBubble = true, cancelable = false) {
+    _dispatchEvent(name: string, payload: object | null = null, canBubble = true, cancelable = false) {
         const userEvent = new CustomEvent(name, {
             bubbles: canBubble,
             cancelable,
@@ -601,7 +638,7 @@ export default class extends Controller {
         return this.element.dispatchEvent(userEvent);
     }
 
-    _handleChildComponentUpdateModel(event) {
+    _handleChildComponentUpdateModel(event: any) {
         const mainModelName = event.detail.modelName;
         const potentialModelNames = [
             { name: mainModelName, required: false },
@@ -642,7 +679,7 @@ export default class extends Controller {
         }
 
         potentialModelNames.reverse();
-        let foundModelName = null;
+        let foundModelName: string | null = null;
         potentialModelNames.forEach((potentialModel) => {
             if (foundModelName) {
                 return;
@@ -682,12 +719,18 @@ export default class extends Controller {
      * re-render the child element. However, if we detect that the
      * "data" on the child element has changed from its initial data,
      * then this will trigger a re-render.
-     *
-     * @param {Element} fromEl
-     * @param {Element} toEl
-     * @return {boolean}
      */
-    _shouldChildLiveElementUpdate(fromEl, toEl) {
+    _shouldChildLiveElementUpdate(fromEl: HTMLElement, toEl: HTMLElement): boolean {
+        if (!fromEl.dataset.originalData) {
+            throw new Error('Missing From Element originalData');
+        }
+        if (!fromEl.dataset.liveDataValue) {
+            throw new Error('Missing From Element liveDataValue');
+        }
+        if (!toEl.dataset.liveDataValue) {
+            throw new Error('Missing To Element liveDataValue');
+        }
+
         return haveRenderedValuesChanged(
             fromEl.dataset.originalData,
             fromEl.dataset.liveDataValue,
@@ -696,6 +739,10 @@ export default class extends Controller {
     }
 
     _exposeOriginalData() {
+        if (!(this.element instanceof HTMLElement)) {
+            throw new Error('Invalid Element Type');
+        }
+
         this.element.dataset.originalData = this.originalDataJSON;
     }
 }
@@ -704,19 +751,16 @@ export default class extends Controller {
  * Tracks the current "re-render" promises.
  */
 class PromiseStack {
-    stack = [];
+    stack: Promise<any>[] = [];
 
-    addPromise(promise) {
+    addPromise(promise: Promise<any>) {
         this.stack.push(promise);
     }
 
     /**
      * Removes the promise AND returns `true` if it is the most recent.
-     *
-     * @param {Promise} promise
-     * @return {boolean}
      */
-    removePromise(promise) {
+    removePromise(promise: Promise<any>): boolean {
         const index = this.findPromiseIndex(promise);
 
         // promise was not found - it was removed because a new Promise
@@ -734,12 +778,12 @@ class PromiseStack {
         return isMostRecent;
     }
 
-    findPromiseIndex(promise) {
+    findPromiseIndex(promise: Promise<any>) {
         return this.stack.findIndex((item) => item === promise);
     }
 }
 
-const parseLoadingAction = function(action, isLoading) {
+const parseLoadingAction = function(action: string, isLoading: boolean) {
     switch (action) {
         case 'show':
             return isLoading ? 'show' : 'hide';

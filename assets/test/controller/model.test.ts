@@ -169,7 +169,6 @@ describe('LiveController data-model Tests', () => {
         // replace data-model with name attribute
         const inputElement = getByLabelText(element, 'First Name:');
 
-        const newData = { user: { firstName: 'Ryan Weaver' } };
         mockRerender({'user': {firstName: 'Ryan WEAVER'}}, deeperModelTemplate, (data) => {
             data.user.firstName = 'Ryan Weaver';
         });

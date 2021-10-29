@@ -1,21 +1,40 @@
 /**
  * A modifier for a directive
- *
- * @typedef {Object} DirectiveModifier
- * @property {string} name The name of the modifier (e.g. delay)
- * @property {string|null} value The value of the single argument or null if no argument
  */
+interface DirectiveModifier {
+    /**
+     * The name of the modifier (e.g. delay)
+     */
+    name: string;
+
+    /**
+     * The value of the single argument or null if no argument
+     */
+    value: string | null;
+}
 
 /**
  * A directive with action, args and modifiers.
- *
- * @typedef {Object} Directive
- * @property {string} action The name of the action (e.g. addClass)
- * @property {string[]} args An array of unnamed arguments passed to the action
- * @property {Object} named An object of named arguments
- * @property {DirectiveModifier[]} modifiers Any modifiers applied to the action
- * @property {function} getString()
  */
+export interface Directive {
+    /**
+     * The name of the action (e.g. addClass)
+     */
+    action: string;
+    /**
+     * An array of unnamed arguments passed to the action
+     */
+    args: string[];
+    /**
+     * An object of named arguments
+     */
+    named: any;
+    /**
+     * Any modifiers applied to the action
+     */
+    modifiers: DirectiveModifier[];
+    getString: { (): string };
+}
 
 /**
  * Parses strings like "addClass(foo) removeAttribute(bar)"
@@ -36,10 +55,9 @@
  *      ]
  *
  * @param {string} content The value of the attribute
- * @return {Directive[]}
  */
-export function parseDirectives(content) {
-    const directives = [];
+export function parseDirectives(content: string): Directive[] {
+    const directives: Directive[] = [];
 
     if (!content) {
         return directives;
@@ -48,9 +66,9 @@ export function parseDirectives(content) {
     let currentActionName = '';
     let currentArgumentName = '';
     let currentArgumentValue = '';
-    let currentArguments = [];
-    let currentNamedArguments = {};
-    let currentModifiers = [];
+    let currentArguments: string[] = [];
+    let currentNamedArguments: any = {};
+    let currentModifiers: { name: string, value: string | null }[] = [];
     let state = 'action';
 
     const getLastActionName = function() {
@@ -129,7 +147,7 @@ export function parseDirectives(content) {
         state = 'action';
     }
 
-    for (var i = 0; i < content.length; i++) {
+    for (let i = 0; i < content.length; i++) {
         const char = content[i];
         switch(state) {
             case 'action':

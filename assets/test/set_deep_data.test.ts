@@ -76,7 +76,7 @@ describe('setDeepData', () => {
             },
             validatedFields: []
         }
-        let validatedFields = ['foo'];
+        const validatedFields = ['foo'];
         let finalData = setDeepData(data, 'post.message', 'updated');
         finalData = setDeepData(finalData, 'validatedFields', validatedFields);
         finalData = setDeepData(finalData, 'post.message', 'updated again');

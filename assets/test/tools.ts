@@ -43,7 +43,7 @@ const dataToJsonAttribute = (data) => {
     container.dataset.foo = JSON.stringify(data);
 
     // returns the now-escaped string, ready to be used in an HTML attribute
-    return container.outerHTML.match(/data\-foo="(.+)\"/)[1]
+    return container.outerHTML.match(/data-foo="(.+)"/)[1]
 }
 
 const initLiveComponent = (url, data) => {
@@ -63,14 +63,16 @@ const initLiveComponent = (url, data) => {
  *
  * @param {Object} sentData The *expected* data that should be sent to the server
  * @param {function} renderCallback Function that will render the component
- * @param {function} changeDataCallback Specify if you want to change the data before rendering
+ * @param {function|null} changeDataCallback Specify if you want to change the data before rendering
  */
-const mockRerender = (sentData, renderCallback, changeDataCallback = (data) => {}) => {
+const mockRerender = (sentData, renderCallback, changeDataCallback = null) => {
     const params = new URLSearchParams('');
 
     const url = `end:?${buildSearchParams(params, sentData).toString()}`;
 
-    changeDataCallback(sentData);
+    if (changeDataCallback) {
+        changeDataCallback(sentData);
+    }
 
     fetchMock.mock(url, {
         html: renderCallback(sentData),
