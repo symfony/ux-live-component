@@ -9,28 +9,39 @@
  * file that was distributed with this source code.
  */
 
-namespace Symfony\UX\LiveComponent\Tests\Fixture\Component;
+namespace Symfony\UX\LiveComponent\Tests\Fixtures\Component;
 
 use Symfony\UX\LiveComponent\Attribute\AsLiveComponent;
+use Symfony\UX\LiveComponent\Attribute\LiveAction;
 use Symfony\UX\LiveComponent\Attribute\LiveProp;
 use Symfony\UX\LiveComponent\DefaultActionTrait;
+use Symfony\UX\LiveComponent\Tests\Fixtures\Entity\Entity1;
 
 /**
  * @author Kevin Bond <kevinbond@gmail.com>
  */
-#[AsLiveComponent('component3')]
-final class Component3
+#[AsLiveComponent('component1')]
+final class Component1
 {
     use DefaultActionTrait;
 
-    #[LiveProp(fieldName: 'myProp1')]
-    public $prop1;
+    #[LiveProp]
+    public ?Entity1 $prop1;
 
-    #[LiveProp(fieldName: 'getProp2Name()')]
-    public $prop2;
+    #[LiveProp]
+    public \DateTimeInterface $prop2;
 
-    public function getProp2Name(): string
+    #[LiveProp(writable: true)]
+    public $prop3;
+
+    public $prop4;
+
+    #[LiveAction]
+    public function method1()
     {
-        return 'myProp2';
+    }
+
+    public function method2()
+    {
     }
 }
