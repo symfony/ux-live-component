@@ -620,7 +620,7 @@ the user to switch the *entity* to another? For example:
 
     <select data-model="post">
         {% for post in posts %}
-            <option data-model="{{ post.id }}">{{ post.title }}</option>
+            <option value="{{ post.id }}">{{ post.title }}</option>
         {% endfor %}
     </select>
 
