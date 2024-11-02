@@ -9,7 +9,8 @@
     },
     "license": "MIT",
     "scripts": {
-        "build": "echo 'The build script is not yet configured.' && exit 1",
+        "build": "node ../../../bin/build_package.js .",
+        "watch": "node ../../../bin/build_package.js . --watch",
         "test": "echo 'The test script is not yet configured.' && exit 1",
         "lint": "biome lint --write",
         "format": "biome format --write",
