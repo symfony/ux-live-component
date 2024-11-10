@@ -1872,7 +1872,10 @@ class HydrationTest
         return new HydrationTestCase(
             $this->component,
             new LiveComponentMetadata(
-                new ComponentMetadata(['key' => '__testing']),
+                new ComponentMetadata([
+                    'key' => '__testing',
+                    'mount' => $reflectionClass->hasMethod('mount') ? ['mount'] : [],
+                ]),
                 $metadataFactory->createPropMetadatas($reflectionClass),
             ),
             $this->inputProps,
