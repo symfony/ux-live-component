@@ -1875,6 +1875,7 @@ class HydrationTest
                 new ComponentMetadata([
                     'key' => '__testing',
                     'mount' => $reflectionClass->hasMethod('mount') ? ['mount'] : [],
+                    'service_id' => '__testing_id',
                 ]),
                 $metadataFactory->createPropMetadatas($reflectionClass),
             ),
