@@ -250,26 +250,18 @@ function setValueOnElement(element, value) {
             return;
         }
         if (element.type === 'radio') {
-            element.checked = element.value === value;
+            element.checked = element.value == value;
             return;
         }
         if (element.type === 'checkbox') {
             if (Array.isArray(value)) {
-                let valueFound = false;
-                value.forEach((val) => {
-                    if (val === element.value) {
-                        valueFound = true;
-                    }
-                });
-                element.checked = valueFound;
+                element.checked = value.some((val) => val == element.value);
+            }
+            else if (element.hasAttribute('value')) {
+                element.checked = element.value == value;
             }
             else {
-                if (element.hasAttribute('value')) {
-                    element.checked = element.value === value;
-                }
-                else {
-                    element.checked = value;
-                }
+                element.checked = value;
             }
             return;
         }
