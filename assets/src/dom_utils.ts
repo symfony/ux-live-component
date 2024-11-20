@@ -2,7 +2,6 @@ import type ValueStore from './Component/ValueStore';
 import { type Directive, parseDirectives } from './Directive/directives_parser';
 import { normalizeModelName } from './string_utils';
 import type Component from './Component';
-import { findChildren } from './ComponentRegistry';
 import getElementAsTagText from './Util/getElementAsTagText';
 
 /**
@@ -208,19 +207,9 @@ export function elementBelongsToThisComponent(element: Element, component: Compo
         return false;
     }
 
-    let foundChildComponent = false;
-    findChildren(component).forEach((childComponent) => {
-        if (foundChildComponent) {
-            // return early
-            return;
-        }
+    const closestLiveComponent = element.closest('[data-controller~="live"]');
 
-        if (childComponent.element === element || childComponent.element.contains(element)) {
-            foundChildComponent = true;
-        }
-    });
-
-    return !foundChildComponent;
+    return closestLiveComponent === component.element;
 }
 
 export function cloneHTMLElement(element: HTMLElement): HTMLElement {

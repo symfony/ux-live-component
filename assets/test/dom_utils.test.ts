@@ -271,9 +271,17 @@ describe('elementBelongsToThisComponent', () => {
         expect(elementBelongsToThisComponent(targetElement, component)).toBeFalsy();
     });
 
-    it('returns true if element lives inside of controller', () => {
-        const targetElement = htmlToElement('<input name="user[firstName]">');
+    it('returns true if element lives inside of a div', () => {
+        const targetElement = htmlToElement('<input name="user[firstName]"/>');
         const component = createComponent('<div></div>');
+        component.element.appendChild(targetElement);
+
+        expect(elementBelongsToThisComponent(targetElement, component)).toBeFalsy();
+    });
+
+    it('returns true if element lives inside of live controller', () => {
+        const targetElement = htmlToElement('<input name="user[firstName]"/>');
+        const component = createComponent('<div data-controller="live" data-live-name-value="parentLabel"></div>');
         component.element.appendChild(targetElement);
 
         expect(elementBelongsToThisComponent(targetElement, component)).toBeTruthy();
@@ -287,7 +295,6 @@ describe('elementBelongsToThisComponent', () => {
         const component = createComponent('<div class="parent"></div>');
         component.element.appendChild(childComponent.element);
 
-        //expect(elementBelongsToThisComponent(targetElement, childComponent)).toBeTruthy();
         expect(elementBelongsToThisComponent(targetElement, component)).toBeFalsy();
     });
 
