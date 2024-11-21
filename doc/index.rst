@@ -2741,7 +2741,7 @@ name with ``#[LiveArg]`` in front::
     public function incrementProductCount(#[LiveArg] int $product)
     {
         $this->productCount++;
-        $this->lastProduct = $data['product'];
+        $this->lastProductId = $product;
     }
 
 And because event listeners are also actions, you can type-hint an argument
