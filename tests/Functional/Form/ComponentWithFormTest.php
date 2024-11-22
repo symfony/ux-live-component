@@ -15,6 +15,7 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\UX\LiveComponent\Tests\Fixtures\Component\FormWithCollectionTypeComponent;
+use Symfony\UX\LiveComponent\Tests\Fixtures\Factory\CategoryFixtureEntityFactory;
 use Symfony\UX\LiveComponent\Tests\Fixtures\Form\BlogPostFormType;
 use Symfony\UX\LiveComponent\Tests\LiveComponentTestHelper;
 use Zenstruck\Browser\Test\HasBrowser;
@@ -157,6 +158,9 @@ class ComponentWithFormTest extends KernelTestCase
 
     public function testHandleCheckboxChanges(): void
     {
+        $category = CategoryFixtureEntityFactory::createMany(5);
+        $id = $category[0]->getId();
+
         $mounted = $this->mountComponent(
             'form_with_many_different_fields_type',
             [
@@ -174,9 +178,12 @@ class ComponentWithFormTest extends KernelTestCase
             'textarea' => '',
             'range' => '',
             'choice' => '',
+            'choice_required_with_placeholder' => '',
+            'choice_required_without_placeholder' => '2',
             'choice_expanded' => '',
             'choice_multiple' => ['2'],
             'select_multiple' => ['2'],
+            'entity' => (string) $id,
             'checkbox' => null,
             'checkbox_checked' => '1',
             'file' => '',
@@ -296,6 +303,7 @@ class ComponentWithFormTest extends KernelTestCase
 
     public function testResetForm(): void
     {
+        CategoryFixtureEntityFactory::createMany(5);
         $mounted = $this->mountComponent('form_with_many_different_fields_type');
 
         $dehydratedProps = $this->dehydrateComponent($mounted)->getProps();

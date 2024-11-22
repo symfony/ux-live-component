@@ -258,9 +258,26 @@ trait ComponentWithFormTrait
             if (\array_key_exists('checked', $child->vars)) {
                 // special handling for check boxes
                 $values[$name] = $child->vars['checked'] ? $child->vars['value'] : null;
-            } else {
-                $values[$name] = $child->vars['value'];
+                continue;
             }
+
+            if (\array_key_exists('choices', $child->vars)
+                && $child->vars['required']
+                && !$child->vars['disabled']
+                && !$child->vars['value']
+                && !$child->vars['placeholder']
+                && !$child->vars['multiple']
+                && !$child->vars['expanded']
+                && $child->vars['choices']
+            ) {
+                if (null !== $firstKey = array_key_first($child->vars['choices'])) {
+                    $values[$name] = $child->vars['choices'][$firstKey]->value ?? null;
+                }
+
+                continue;
+            }
+
+            $values[$name] = $child->vars['value'];
         }
 
         return $values;
