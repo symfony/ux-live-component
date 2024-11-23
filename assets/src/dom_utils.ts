@@ -79,34 +79,26 @@ export function setValueOnElement(element: HTMLElement, value: any): void {
         }
 
         if (element.type === 'radio') {
-            element.checked = element.value === value;
+            // biome-ignore lint/suspicious/noDoubleEquals: need fuzzy matching
+            element.checked = element.value == value;
 
             return;
         }
 
         if (element.type === 'checkbox') {
             if (Array.isArray(value)) {
-                // I'm purposely not using Array.includes here because it's
-                // strict, and because of Numeric/String mis-casting, I
-                // want the "includes" to be "fuzzy".
-                let valueFound = false;
-                value.forEach((val) => {
-                    if (val === element.value) {
-                        valueFound = true;
-                    }
-                });
-
-                element.checked = valueFound;
+                // Because of Numeric/String mis-casting,
+                // we want the "includes" to be "fuzzy".
+                // biome-ignore lint/suspicious/noDoubleEquals: need fuzzy matching
+                element.checked = value.some((val) => val == element.value);
+            } else if (element.hasAttribute('value')) {
+                // if the checkbox has a value="", then check if it matches
+                // biome-ignore lint/suspicious/noDoubleEquals: need fuzzy matching
+                element.checked = element.value == value;
             } else {
-                if (element.hasAttribute('value')) {
-                    // if the checkbox has a value="", then check if it matches
-                    element.checked = element.value === value;
-                } else {
-                    // no value, treat it like a boolean
-                    element.checked = value;
-                }
+                // no value, treat it like a boolean
+                element.checked = value;
             }
-
             return;
         }
     }
