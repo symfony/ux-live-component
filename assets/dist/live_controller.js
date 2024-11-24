@@ -131,82 +131,6 @@ function getElementAsTagText(element) {
         : element.outerHTML;
 }
 
-let componentMapByElement = new WeakMap();
-let componentMapByComponent = new Map();
-const registerComponent = (component) => {
-    componentMapByElement.set(component.element, component);
-    componentMapByComponent.set(component, component.name);
-};
-const unregisterComponent = (component) => {
-    componentMapByElement.delete(component.element);
-    componentMapByComponent.delete(component);
-};
-const getComponent = (element) => new Promise((resolve, reject) => {
-    let count = 0;
-    const maxCount = 10;
-    const interval = setInterval(() => {
-        const component = componentMapByElement.get(element);
-        if (component) {
-            clearInterval(interval);
-            resolve(component);
-        }
-        count++;
-        if (count > maxCount) {
-            clearInterval(interval);
-            reject(new Error(`Component not found for element ${getElementAsTagText(element)}`));
-        }
-    }, 5);
-});
-const findComponents = (currentComponent, onlyParents, onlyMatchName) => {
-    const components = [];
-    componentMapByComponent.forEach((componentName, component) => {
-        if (onlyParents && (currentComponent === component || !component.element.contains(currentComponent.element))) {
-            return;
-        }
-        if (onlyMatchName && componentName !== onlyMatchName) {
-            return;
-        }
-        components.push(component);
-    });
-    return components;
-};
-const findChildren = (currentComponent) => {
-    const children = [];
-    componentMapByComponent.forEach((componentName, component) => {
-        if (currentComponent === component) {
-            return;
-        }
-        if (!currentComponent.element.contains(component.element)) {
-            return;
-        }
-        let foundChildComponent = false;
-        componentMapByComponent.forEach((childComponentName, childComponent) => {
-            if (foundChildComponent) {
-                return;
-            }
-            if (childComponent === component) {
-                return;
-            }
-            if (childComponent.element.contains(component.element)) {
-                foundChildComponent = true;
-            }
-        });
-        children.push(component);
-    });
-    return children;
-};
-const findParent = (currentComponent) => {
-    let parentElement = currentComponent.element.parentElement;
-    while (parentElement) {
-        const component = componentMapByElement.get(parentElement);
-        if (component) {
-            return component;
-        }
-        parentElement = parentElement.parentElement;
-    }
-    return null;
-};
-
 function getValueFromElement(element, valueStore) {
     if (element instanceof HTMLInputElement) {
         if (element.type === 'checkbox') {
@@ -320,16 +244,8 @@ function elementBelongsToThisComponent(element, component) {
     if (!component.element.contains(element)) {
         return false;
     }
-    let foundChildComponent = false;
-    findChildren(component).forEach((childComponent) => {
-        if (foundChildComponent) {
-            return;
-        }
-        if (childComponent.element === element || childComponent.element.contains(element)) {
-            foundChildComponent = true;
-        }
-    });
-    return !foundChildComponent;
+    const closestLiveComponent = element.closest('[data-controller~="live"]');
+    return closestLiveComponent === component.element;
 }
 function cloneHTMLElement(element) {
     const newElement = element.cloneNode(true);
@@ -1874,6 +1790,82 @@ class ExternalMutationTracker {
         return element.tagName === 'FONT' && element.getAttribute('style') === 'vertical-align: inherit;';
     }
 }
+
+let componentMapByElement = new WeakMap();
+let componentMapByComponent = new Map();
+const registerComponent = (component) => {
+    componentMapByElement.set(component.element, component);
+    componentMapByComponent.set(component, component.name);
+};
+const unregisterComponent = (component) => {
+    componentMapByElement.delete(component.element);
+    componentMapByComponent.delete(component);
+};
+const getComponent = (element) => new Promise((resolve, reject) => {
+    let count = 0;
+    const maxCount = 10;
+    const interval = setInterval(() => {
+        const component = componentMapByElement.get(element);
+        if (component) {
+            clearInterval(interval);
+            resolve(component);
+        }
+        count++;
+        if (count > maxCount) {
+            clearInterval(interval);
+            reject(new Error(`Component not found for element ${getElementAsTagText(element)}`));
+        }
+    }, 5);
+});
+const findComponents = (currentComponent, onlyParents, onlyMatchName) => {
+    const components = [];
+    componentMapByComponent.forEach((componentName, component) => {
+        if (onlyParents && (currentComponent === component || !component.element.contains(currentComponent.element))) {
+            return;
+        }
+        if (onlyMatchName && componentName !== onlyMatchName) {
+            return;
+        }
+        components.push(component);
+    });
+    return components;
+};
+const findChildren = (currentComponent) => {
+    const children = [];
+    componentMapByComponent.forEach((componentName, component) => {
+        if (currentComponent === component) {
+            return;
+        }
+        if (!currentComponent.element.contains(component.element)) {
+            return;
+        }
+        let foundChildComponent = false;
+        componentMapByComponent.forEach((childComponentName, childComponent) => {
+            if (foundChildComponent) {
+                return;
+            }
+            if (childComponent === component) {
+                return;
+            }
+            if (childComponent.element.contains(component.element)) {
+                foundChildComponent = true;
+            }
+        });
+        children.push(component);
+    });
+    return children;
+};
+const findParent = (currentComponent) => {
+    let parentElement = currentComponent.element.parentElement;
+    while (parentElement) {
+        const component = componentMapByElement.get(parentElement);
+        if (component) {
+            return component;
+        }
+        parentElement = parentElement.parentElement;
+    }
+    return null;
+};
 
 class Component {
     constructor(element, name, props, listeners, id, backend, elementDriver) {
