@@ -17,6 +17,8 @@ use Symfony\Component\Security\Core\User\InMemoryUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\UX\LiveComponent\Test\InteractsWithLiveComponents;
 use Symfony\UX\LiveComponent\Tests\Fixtures\Component\Component2;
+use Symfony\UX\LiveComponent\Tests\Fixtures\Factory\CategoryFixtureEntityFactory;
+use Zenstruck\Foundry\Test\ResetDatabase;
 
 /**
  * @author Kevin Bond <kevinbond@gmail.com>
@@ -24,6 +26,7 @@ use Symfony\UX\LiveComponent\Tests\Fixtures\Component\Component2;
 final class InteractsWithLiveComponentsTest extends KernelTestCase
 {
     use InteractsWithLiveComponents;
+    use ResetDatabase;
 
     public function testCanRenderInitialData(): void
     {
@@ -172,6 +175,7 @@ final class InteractsWithLiveComponentsTest extends KernelTestCase
 
     public function testCanSubmitForm(): void
     {
+        CategoryFixtureEntityFactory::createMany(5);
         $testComponent = $this->createLiveComponent('form_with_many_different_fields_type');
 
         $response = $testComponent->submitForm(['form' => ['text' => 'foobar']])->response();
