@@ -1,9 +1,9 @@
-import Component, { proxifyComponent } from '../../src/Component';
+import { waitFor } from '@testing-library/dom';
+import { Response } from 'node-fetch';
 import type { BackendAction, BackendInterface } from '../../src/Backend/Backend';
 import BackendRequest from '../../src/Backend/BackendRequest';
-import { Response } from 'node-fetch';
-import { waitFor } from '@testing-library/dom';
 import type BackendResponse from '../../src/Backend/BackendResponse';
+import Component, { proxifyComponent } from '../../src/Component';
 import { noopElementDriver } from '../tools';
 
 interface MockBackend extends BackendInterface {

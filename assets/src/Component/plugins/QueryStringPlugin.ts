@@ -1,6 +1,6 @@
+import { HistoryStrategy, UrlUtils } from '../../url_utils';
 import type Component from '../index';
 import type { PluginInterface } from './PluginInterface';
-import { UrlUtils, HistoryStrategy } from '../../url_utils';
 
 interface QueryMapping {
     /**

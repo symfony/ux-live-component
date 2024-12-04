@@ -7,9 +7,9 @@
  * file that was distributed with this source code.
  */
 
-import { shutdownTests, createTest, initComponent } from '../tools';
 import { waitFor } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
+import { createTest, initComponent, shutdownTests } from '../tools';
 
 describe('LiveController polling Tests', () => {
     afterEach(() => {

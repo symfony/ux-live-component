@@ -1,10 +1,10 @@
-import type Component from '../index';
 import {
     elementBelongsToThisComponent,
     getModelDirectiveFromElement,
     getValueFromElement,
     setValueOnElement,
 } from '../../dom_utils';
+import type Component from '../index';
 import type { PluginInterface } from './PluginInterface';
 
 /**

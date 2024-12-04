@@ -1,14 +1,14 @@
+import Backend from '../src/Backend/Backend';
+import Component from '../src/Component';
+import ValueStore from '../src/Component/ValueStore';
 import {
-    getValueFromElement,
     cloneHTMLElement,
-    htmlToElement,
-    getModelDirectiveFromElement,
     elementBelongsToThisComponent,
+    getModelDirectiveFromElement,
+    getValueFromElement,
+    htmlToElement,
     setValueOnElement,
 } from '../src/dom_utils';
-import ValueStore from '../src/Component/ValueStore';
-import Component from '../src/Component';
-import Backend from '../src/Backend/Backend';
 import { noopElementDriver } from './tools';
 
 const createStore = (props: any = {}): ValueStore => new ValueStore(props);

@@ -1,8 +1,8 @@
+import type BackendRequest from '../../Backend/BackendRequest';
+import type Component from '../../Component';
 import { type Directive, type DirectiveModifier, parseDirectives } from '../../Directive/directives_parser';
 import { elementBelongsToThisComponent } from '../../dom_utils';
 import { combineSpacedArray } from '../../string_utils';
-import type BackendRequest from '../../Backend/BackendRequest';
-import type Component from '../../Component';
 import type { PluginInterface } from './PluginInterface';
 
 interface ElementLoadingDirectives {

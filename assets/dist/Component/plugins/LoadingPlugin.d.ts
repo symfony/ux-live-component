@@ -1,6 +1,6 @@
-import { type Directive } from '../../Directive/directives_parser';
 import type BackendRequest from '../../Backend/BackendRequest';
 import type Component from '../../Component';
+import { type Directive } from '../../Directive/directives_parser';
 import type { PluginInterface } from './PluginInterface';
 interface ElementLoadingDirectives {
     element: HTMLElement | SVGElement;

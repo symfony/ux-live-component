@@ -1,8 +1,8 @@
-import Component from '../src/Component';
-import { registerComponent, resetRegistry, getComponent, findComponents } from '../src/ComponentRegistry';
-import BackendRequest from '../src/Backend/BackendRequest';
-import type { BackendInterface } from '../src/Backend/Backend';
 import { Response } from 'node-fetch';
+import type { BackendInterface } from '../src/Backend/Backend';
+import BackendRequest from '../src/Backend/BackendRequest';
+import Component from '../src/Component';
+import { findComponents, getComponent, registerComponent, resetRegistry } from '../src/ComponentRegistry';
 import { noopElementDriver } from './tools';
 
 const createComponent = (element: HTMLElement, name = 'foo-component'): Component => {

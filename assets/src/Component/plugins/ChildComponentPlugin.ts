@@ -1,9 +1,9 @@
-import type Component from '../../Component';
-import type { PluginInterface } from './PluginInterface';
 import type { ChildrenFingerprints } from '../../Backend/Backend';
+import type Component from '../../Component';
+import { findChildren, findParent } from '../../ComponentRegistry';
 import getModelBinding, { type ModelBinding } from '../../Directive/get_model_binding';
 import { getAllModelDirectiveFromElements } from '../../dom_utils';
-import { findChildren, findParent } from '../../ComponentRegistry';
+import type { PluginInterface } from './PluginInterface';
 
 /**
  * Handles all interactions for child components of a component.

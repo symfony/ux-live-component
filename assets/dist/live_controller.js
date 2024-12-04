@@ -1,5 +1,541 @@
 import { Controller } from '@hotwired/stimulus';
 
+class BackendRequest {
+    constructor(promise, actions, updateModels) {
+        this.isResolved = false;
+        this.promise = promise;
+        this.promise.then((response) => {
+            this.isResolved = true;
+            return response;
+        });
+        this.actions = actions;
+        this.updatedModels = updateModels;
+    }
+    containsOneOfActions(targetedActions) {
+        return this.actions.filter((action) => targetedActions.includes(action)).length > 0;
+    }
+    areAnyModelsUpdated(targetedModels) {
+        return this.updatedModels.filter((model) => targetedModels.includes(model)).length > 0;
+    }
+}
+
+class RequestBuilder {
+    constructor(url, method = 'post') {
+        this.url = url;
+        this.method = method;
+    }
+    buildRequest(props, actions, updated, children, updatedPropsFromParent, files) {
+        const splitUrl = this.url.split('?');
+        let [url] = splitUrl;
+        const [, queryString] = splitUrl;
+        const params = new URLSearchParams(queryString || '');
+        const fetchOptions = {};
+        fetchOptions.headers = {
+            Accept: 'application/vnd.live-component+html',
+            'X-Requested-With': 'XMLHttpRequest',
+        };
+        const totalFiles = Object.entries(files).reduce((total, current) => total + current.length, 0);
+        const hasFingerprints = Object.keys(children).length > 0;
+        if (actions.length === 0 &&
+            totalFiles === 0 &&
+            this.method === 'get' &&
+            this.willDataFitInUrl(JSON.stringify(props), JSON.stringify(updated), params, JSON.stringify(children), JSON.stringify(updatedPropsFromParent))) {
+            params.set('props', JSON.stringify(props));
+            params.set('updated', JSON.stringify(updated));
+            if (Object.keys(updatedPropsFromParent).length > 0) {
+                params.set('propsFromParent', JSON.stringify(updatedPropsFromParent));
+            }
+            if (hasFingerprints) {
+                params.set('children', JSON.stringify(children));
+            }
+            fetchOptions.method = 'GET';
+        }
+        else {
+            fetchOptions.method = 'POST';
+            const requestData = { props, updated };
+            if (Object.keys(updatedPropsFromParent).length > 0) {
+                requestData.propsFromParent = updatedPropsFromParent;
+            }
+            if (hasFingerprints) {
+                requestData.children = children;
+            }
+            if (actions.length > 0) {
+                if (actions.length === 1) {
+                    requestData.args = actions[0].args;
+                    url += `/${encodeURIComponent(actions[0].name)}`;
+                }
+                else {
+                    url += '/_batch';
+                    requestData.actions = actions;
+                }
+            }
+            const formData = new FormData();
+            formData.append('data', JSON.stringify(requestData));
+            for (const [key, value] of Object.entries(files)) {
+                const length = value.length;
+                for (let i = 0; i < length; ++i) {
+                    formData.append(key, value[i]);
+                }
+            }
+            fetchOptions.body = formData;
+        }
+        const paramsString = params.toString();
+        return {
+            url: `${url}${paramsString.length > 0 ? `?${paramsString}` : ''}`,
+            fetchOptions,
+        };
+    }
+    willDataFitInUrl(propsJson, updatedJson, params, childrenJson, propsFromParentJson) {
+        const urlEncodedJsonData = new URLSearchParams(propsJson + updatedJson + childrenJson + propsFromParentJson).toString();
+        return (urlEncodedJsonData + params.toString()).length < 1500;
+    }
+}
+
+class Backend {
+    constructor(url, method = 'post') {
+        this.requestBuilder = new RequestBuilder(url, method);
+    }
+    makeRequest(props, actions, updated, children, updatedPropsFromParent, files) {
+        const { url, fetchOptions } = this.requestBuilder.buildRequest(props, actions, updated, children, updatedPropsFromParent, files);
+        return new BackendRequest(fetch(url, fetchOptions), actions.map((backendAction) => backendAction.name), Object.keys(updated));
+    }
+}
+
+class BackendResponse {
+    constructor(response) {
+        this.response = response;
+    }
+    async getBody() {
+        if (!this.body) {
+            this.body = await this.response.text();
+        }
+        return this.body;
+    }
+}
+
+function getElementAsTagText(element) {
+    return element.innerHTML
+        ? element.outerHTML.slice(0, element.outerHTML.indexOf(element.innerHTML))
+        : element.outerHTML;
+}
+
+let componentMapByElement = new WeakMap();
+let componentMapByComponent = new Map();
+const registerComponent = (component) => {
+    componentMapByElement.set(component.element, component);
+    componentMapByComponent.set(component, component.name);
+};
+const unregisterComponent = (component) => {
+    componentMapByElement.delete(component.element);
+    componentMapByComponent.delete(component);
+};
+const getComponent = (element) => new Promise((resolve, reject) => {
+    let count = 0;
+    const maxCount = 10;
+    const interval = setInterval(() => {
+        const component = componentMapByElement.get(element);
+        if (component) {
+            clearInterval(interval);
+            resolve(component);
+        }
+        count++;
+        if (count > maxCount) {
+            clearInterval(interval);
+            reject(new Error(`Component not found for element ${getElementAsTagText(element)}`));
+        }
+    }, 5);
+});
+const findComponents = (currentComponent, onlyParents, onlyMatchName) => {
+    const components = [];
+    componentMapByComponent.forEach((componentName, component) => {
+        if (onlyParents && (currentComponent === component || !component.element.contains(currentComponent.element))) {
+            return;
+        }
+        if (onlyMatchName && componentName !== onlyMatchName) {
+            return;
+        }
+        components.push(component);
+    });
+    return components;
+};
+const findChildren = (currentComponent) => {
+    const children = [];
+    componentMapByComponent.forEach((componentName, component) => {
+        if (currentComponent === component) {
+            return;
+        }
+        if (!currentComponent.element.contains(component.element)) {
+            return;
+        }
+        let foundChildComponent = false;
+        componentMapByComponent.forEach((childComponentName, childComponent) => {
+            if (foundChildComponent) {
+                return;
+            }
+            if (childComponent === component) {
+                return;
+            }
+            if (childComponent.element.contains(component.element)) {
+                foundChildComponent = true;
+            }
+        });
+        children.push(component);
+    });
+    return children;
+};
+const findParent = (currentComponent) => {
+    let parentElement = currentComponent.element.parentElement;
+    while (parentElement) {
+        const component = componentMapByElement.get(parentElement);
+        if (component) {
+            return component;
+        }
+        parentElement = parentElement.parentElement;
+    }
+    return null;
+};
+
+class HookManager {
+    constructor() {
+        this.hooks = new Map();
+    }
+    register(hookName, callback) {
+        const hooks = this.hooks.get(hookName) || [];
+        hooks.push(callback);
+        this.hooks.set(hookName, hooks);
+    }
+    unregister(hookName, callback) {
+        const hooks = this.hooks.get(hookName) || [];
+        const index = hooks.indexOf(callback);
+        if (index === -1) {
+            return;
+        }
+        hooks.splice(index, 1);
+        this.hooks.set(hookName, hooks);
+    }
+    triggerHook(hookName, ...args) {
+        const hooks = this.hooks.get(hookName) || [];
+        hooks.forEach((callback) => callback(...args));
+    }
+}
+
+class ChangingItemsTracker {
+    constructor() {
+        this.changedItems = new Map();
+        this.removedItems = new Map();
+    }
+    setItem(itemName, newValue, previousValue) {
+        if (this.removedItems.has(itemName)) {
+            const removedRecord = this.removedItems.get(itemName);
+            this.removedItems.delete(itemName);
+            if (removedRecord.original === newValue) {
+                return;
+            }
+        }
+        if (this.changedItems.has(itemName)) {
+            const originalRecord = this.changedItems.get(itemName);
+            if (originalRecord.original === newValue) {
+                this.changedItems.delete(itemName);
+                return;
+            }
+            this.changedItems.set(itemName, { original: originalRecord.original, new: newValue });
+            return;
+        }
+        this.changedItems.set(itemName, { original: previousValue, new: newValue });
+    }
+    removeItem(itemName, currentValue) {
+        let trueOriginalValue = currentValue;
+        if (this.changedItems.has(itemName)) {
+            const originalRecord = this.changedItems.get(itemName);
+            trueOriginalValue = originalRecord.original;
+            this.changedItems.delete(itemName);
+            if (trueOriginalValue === null) {
+                return;
+            }
+        }
+        if (!this.removedItems.has(itemName)) {
+            this.removedItems.set(itemName, { original: trueOriginalValue });
+        }
+    }
+    getChangedItems() {
+        return Array.from(this.changedItems, ([name, { new: value }]) => ({ name, value }));
+    }
+    getRemovedItems() {
+        return Array.from(this.removedItems.keys());
+    }
+    isEmpty() {
+        return this.changedItems.size === 0 && this.removedItems.size === 0;
+    }
+}
+
+class ElementChanges {
+    constructor() {
+        this.addedClasses = new Set();
+        this.removedClasses = new Set();
+        this.styleChanges = new ChangingItemsTracker();
+        this.attributeChanges = new ChangingItemsTracker();
+    }
+    addClass(className) {
+        if (!this.removedClasses.delete(className)) {
+            this.addedClasses.add(className);
+        }
+    }
+    removeClass(className) {
+        if (!this.addedClasses.delete(className)) {
+            this.removedClasses.add(className);
+        }
+    }
+    addStyle(styleName, newValue, originalValue) {
+        this.styleChanges.setItem(styleName, newValue, originalValue);
+    }
+    removeStyle(styleName, originalValue) {
+        this.styleChanges.removeItem(styleName, originalValue);
+    }
+    addAttribute(attributeName, newValue, originalValue) {
+        this.attributeChanges.setItem(attributeName, newValue, originalValue);
+    }
+    removeAttribute(attributeName, originalValue) {
+        this.attributeChanges.removeItem(attributeName, originalValue);
+    }
+    getAddedClasses() {
+        return [...this.addedClasses];
+    }
+    getRemovedClasses() {
+        return [...this.removedClasses];
+    }
+    getChangedStyles() {
+        return this.styleChanges.getChangedItems();
+    }
+    getRemovedStyles() {
+        return this.styleChanges.getRemovedItems();
+    }
+    getChangedAttributes() {
+        return this.attributeChanges.getChangedItems();
+    }
+    getRemovedAttributes() {
+        return this.attributeChanges.getRemovedItems();
+    }
+    applyToElement(element) {
+        element.classList.add(...this.addedClasses);
+        element.classList.remove(...this.removedClasses);
+        this.styleChanges.getChangedItems().forEach((change) => {
+            element.style.setProperty(change.name, change.value);
+            return;
+        });
+        this.styleChanges.getRemovedItems().forEach((styleName) => {
+            element.style.removeProperty(styleName);
+        });
+        this.attributeChanges.getChangedItems().forEach((change) => {
+            element.setAttribute(change.name, change.value);
+        });
+        this.attributeChanges.getRemovedItems().forEach((attributeName) => {
+            element.removeAttribute(attributeName);
+        });
+    }
+    isEmpty() {
+        return (this.addedClasses.size === 0 &&
+            this.removedClasses.size === 0 &&
+            this.styleChanges.isEmpty() &&
+            this.attributeChanges.isEmpty());
+    }
+}
+
+class ExternalMutationTracker {
+    constructor(element, shouldTrackChangeCallback) {
+        this.changedElements = new WeakMap();
+        this.changedElementsCount = 0;
+        this.addedElements = [];
+        this.removedElements = [];
+        this.isStarted = false;
+        this.element = element;
+        this.shouldTrackChangeCallback = shouldTrackChangeCallback;
+        this.mutationObserver = new MutationObserver(this.onMutations.bind(this));
+    }
+    start() {
+        if (this.isStarted) {
+            return;
+        }
+        this.mutationObserver.observe(this.element, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeOldValue: true,
+        });
+        this.isStarted = true;
+    }
+    stop() {
+        if (this.isStarted) {
+            this.mutationObserver.disconnect();
+            this.isStarted = false;
+        }
+    }
+    getChangedElement(element) {
+        return this.changedElements.has(element) ? this.changedElements.get(element) : null;
+    }
+    getAddedElements() {
+        return this.addedElements;
+    }
+    wasElementAdded(element) {
+        return this.addedElements.includes(element);
+    }
+    handlePendingChanges() {
+        this.onMutations(this.mutationObserver.takeRecords());
+    }
+    onMutations(mutations) {
+        const handledAttributeMutations = new WeakMap();
+        for (const mutation of mutations) {
+            const element = mutation.target;
+            if (!this.shouldTrackChangeCallback(element)) {
+                continue;
+            }
+            if (this.isElementAddedByTranslation(element)) {
+                continue;
+            }
+            let isChangeInAddedElement = false;
+            for (const addedElement of this.addedElements) {
+                if (addedElement.contains(element)) {
+                    isChangeInAddedElement = true;
+                    break;
+                }
+            }
+            if (isChangeInAddedElement) {
+                continue;
+            }
+            switch (mutation.type) {
+                case 'childList':
+                    this.handleChildListMutation(mutation);
+                    break;
+                case 'attributes':
+                    if (!handledAttributeMutations.has(element)) {
+                        handledAttributeMutations.set(element, []);
+                    }
+                    if (!handledAttributeMutations.get(element).includes(mutation.attributeName)) {
+                        this.handleAttributeMutation(mutation);
+                        handledAttributeMutations.set(element, [
+                            ...handledAttributeMutations.get(element),
+                            mutation.attributeName,
+                        ]);
+                    }
+                    break;
+            }
+        }
+    }
+    handleChildListMutation(mutation) {
+        mutation.addedNodes.forEach((node) => {
+            if (!(node instanceof Element)) {
+                return;
+            }
+            if (this.removedElements.includes(node)) {
+                this.removedElements.splice(this.removedElements.indexOf(node), 1);
+                return;
+            }
+            if (this.isElementAddedByTranslation(node)) {
+                return;
+            }
+            this.addedElements.push(node);
+        });
+        mutation.removedNodes.forEach((node) => {
+            if (!(node instanceof Element)) {
+                return;
+            }
+            if (this.addedElements.includes(node)) {
+                this.addedElements.splice(this.addedElements.indexOf(node), 1);
+                return;
+            }
+            this.removedElements.push(node);
+        });
+    }
+    handleAttributeMutation(mutation) {
+        const element = mutation.target;
+        if (!this.changedElements.has(element)) {
+            this.changedElements.set(element, new ElementChanges());
+            this.changedElementsCount++;
+        }
+        const changedElement = this.changedElements.get(element);
+        switch (mutation.attributeName) {
+            case 'class':
+                this.handleClassAttributeMutation(mutation, changedElement);
+                break;
+            case 'style':
+                this.handleStyleAttributeMutation(mutation, changedElement);
+                break;
+            default:
+                this.handleGenericAttributeMutation(mutation, changedElement);
+        }
+        if (changedElement.isEmpty()) {
+            this.changedElements.delete(element);
+            this.changedElementsCount--;
+        }
+    }
+    handleClassAttributeMutation(mutation, elementChanges) {
+        const element = mutation.target;
+        const previousValue = mutation.oldValue || '';
+        const previousValues = previousValue.match(/(\S+)/gu) || [];
+        const newValues = [].slice.call(element.classList);
+        const addedValues = newValues.filter((value) => !previousValues.includes(value));
+        const removedValues = previousValues.filter((value) => !newValues.includes(value));
+        addedValues.forEach((value) => {
+            elementChanges.addClass(value);
+        });
+        removedValues.forEach((value) => {
+            elementChanges.removeClass(value);
+        });
+    }
+    handleStyleAttributeMutation(mutation, elementChanges) {
+        const element = mutation.target;
+        const previousValue = mutation.oldValue || '';
+        const previousStyles = this.extractStyles(previousValue);
+        const newValue = element.getAttribute('style') || '';
+        const newStyles = this.extractStyles(newValue);
+        const addedOrChangedStyles = Object.keys(newStyles).filter((key) => previousStyles[key] === undefined || previousStyles[key] !== newStyles[key]);
+        const removedStyles = Object.keys(previousStyles).filter((key) => !newStyles[key]);
+        addedOrChangedStyles.forEach((style) => {
+            elementChanges.addStyle(style, newStyles[style], previousStyles[style] === undefined ? null : previousStyles[style]);
+        });
+        removedStyles.forEach((style) => {
+            elementChanges.removeStyle(style, previousStyles[style]);
+        });
+    }
+    handleGenericAttributeMutation(mutation, elementChanges) {
+        const attributeName = mutation.attributeName;
+        const element = mutation.target;
+        let oldValue = mutation.oldValue;
+        let newValue = element.getAttribute(attributeName);
+        if (oldValue === attributeName) {
+            oldValue = '';
+        }
+        if (newValue === attributeName) {
+            newValue = '';
+        }
+        if (!element.hasAttribute(attributeName)) {
+            if (oldValue === null) {
+                return;
+            }
+            elementChanges.removeAttribute(attributeName, mutation.oldValue);
+            return;
+        }
+        if (newValue === oldValue) {
+            return;
+        }
+        elementChanges.addAttribute(attributeName, element.getAttribute(attributeName), mutation.oldValue);
+    }
+    extractStyles(styles) {
+        const styleObject = {};
+        styles.split(';').forEach((style) => {
+            const parts = style.split(':');
+            if (parts.length === 1) {
+                return;
+            }
+            const property = parts[0].trim();
+            styleObject[property] = parts.slice(1).join(':').trim();
+        });
+        return styleObject;
+    }
+    isElementAddedByTranslation(element) {
+        return element.tagName === 'FONT' && element.getAttribute('style') === 'vertical-align: inherit;';
+    }
+}
+
 function parseDirectives(content) {
     const directives = [];
     if (!content) {
@@ -123,12 +659,6 @@ function normalizeModelName(model) {
         .split('[')
         .map((s) => s.replace(']', ''))
         .join('.'));
-}
-
-function getElementAsTagText(element) {
-    return element.innerHTML
-        ? element.outerHTML.slice(0, element.outerHTML.indexOf(element.innerHTML))
-        : element.outerHTML;
 }
 
 function getValueFromElement(element, valueStore) {
@@ -286,98 +816,6 @@ const getMultipleCheckboxValue = (element, currentValues) => {
     return finalValues;
 };
 const inputValue = (element) => element.dataset.value ? element.dataset.value : element.value;
-
-function getDeepData(data, propertyPath) {
-    const { currentLevelData, finalKey } = parseDeepData(data, propertyPath);
-    if (currentLevelData === undefined) {
-        return undefined;
-    }
-    return currentLevelData[finalKey];
-}
-const parseDeepData = (data, propertyPath) => {
-    const finalData = JSON.parse(JSON.stringify(data));
-    let currentLevelData = finalData;
-    const parts = propertyPath.split('.');
-    for (let i = 0; i < parts.length - 1; i++) {
-        currentLevelData = currentLevelData[parts[i]];
-    }
-    const finalKey = parts[parts.length - 1];
-    return {
-        currentLevelData,
-        finalData,
-        finalKey,
-        parts,
-    };
-};
-
-class ValueStore {
-    constructor(props) {
-        this.props = {};
-        this.dirtyProps = {};
-        this.pendingProps = {};
-        this.updatedPropsFromParent = {};
-        this.props = props;
-    }
-    get(name) {
-        const normalizedName = normalizeModelName(name);
-        if (this.dirtyProps[normalizedName] !== undefined) {
-            return this.dirtyProps[normalizedName];
-        }
-        if (this.pendingProps[normalizedName] !== undefined) {
-            return this.pendingProps[normalizedName];
-        }
-        if (this.props[normalizedName] !== undefined) {
-            return this.props[normalizedName];
-        }
-        return getDeepData(this.props, normalizedName);
-    }
-    has(name) {
-        return this.get(name) !== undefined;
-    }
-    set(name, value) {
-        const normalizedName = normalizeModelName(name);
-        if (this.get(normalizedName) === value) {
-            return false;
-        }
-        this.dirtyProps[normalizedName] = value;
-        return true;
-    }
-    getOriginalProps() {
-        return { ...this.props };
-    }
-    getDirtyProps() {
-        return { ...this.dirtyProps };
-    }
-    getUpdatedPropsFromParent() {
-        return { ...this.updatedPropsFromParent };
-    }
-    flushDirtyPropsToPending() {
-        this.pendingProps = { ...this.dirtyProps };
-        this.dirtyProps = {};
-    }
-    reinitializeAllProps(props) {
-        this.props = props;
-        this.updatedPropsFromParent = {};
-        this.pendingProps = {};
-    }
-    pushPendingPropsBackToDirty() {
-        this.dirtyProps = { ...this.pendingProps, ...this.dirtyProps };
-        this.pendingProps = {};
-    }
-    storeNewPropsFromParent(props) {
-        let changed = false;
-        for (const [key, value] of Object.entries(props)) {
-            const currentValue = this.get(key);
-            if (currentValue !== value) {
-                changed = true;
-            }
-        }
-        if (changed) {
-            this.updatedPropsFromParent = props;
-        }
-        return changed;
-    }
-}
 
 // base IIFE to define idiomorph
 var Idiomorph = (function () {
@@ -1438,434 +1876,97 @@ class UnsyncedInputContainer {
     }
 }
 
-class HookManager {
-    constructor() {
-        this.hooks = new Map();
+function getDeepData(data, propertyPath) {
+    const { currentLevelData, finalKey } = parseDeepData(data, propertyPath);
+    if (currentLevelData === undefined) {
+        return undefined;
     }
-    register(hookName, callback) {
-        const hooks = this.hooks.get(hookName) || [];
-        hooks.push(callback);
-        this.hooks.set(hookName, hooks);
+    return currentLevelData[finalKey];
+}
+const parseDeepData = (data, propertyPath) => {
+    const finalData = JSON.parse(JSON.stringify(data));
+    let currentLevelData = finalData;
+    const parts = propertyPath.split('.');
+    for (let i = 0; i < parts.length - 1; i++) {
+        currentLevelData = currentLevelData[parts[i]];
     }
-    unregister(hookName, callback) {
-        const hooks = this.hooks.get(hookName) || [];
-        const index = hooks.indexOf(callback);
-        if (index === -1) {
-            return;
+    const finalKey = parts[parts.length - 1];
+    return {
+        currentLevelData,
+        finalData,
+        finalKey,
+        parts,
+    };
+};
+
+class ValueStore {
+    constructor(props) {
+        this.props = {};
+        this.dirtyProps = {};
+        this.pendingProps = {};
+        this.updatedPropsFromParent = {};
+        this.props = props;
+    }
+    get(name) {
+        const normalizedName = normalizeModelName(name);
+        if (this.dirtyProps[normalizedName] !== undefined) {
+            return this.dirtyProps[normalizedName];
         }
-        hooks.splice(index, 1);
-        this.hooks.set(hookName, hooks);
+        if (this.pendingProps[normalizedName] !== undefined) {
+            return this.pendingProps[normalizedName];
+        }
+        if (this.props[normalizedName] !== undefined) {
+            return this.props[normalizedName];
+        }
+        return getDeepData(this.props, normalizedName);
     }
-    triggerHook(hookName, ...args) {
-        const hooks = this.hooks.get(hookName) || [];
-        hooks.forEach((callback) => callback(...args));
+    has(name) {
+        return this.get(name) !== undefined;
+    }
+    set(name, value) {
+        const normalizedName = normalizeModelName(name);
+        if (this.get(normalizedName) === value) {
+            return false;
+        }
+        this.dirtyProps[normalizedName] = value;
+        return true;
+    }
+    getOriginalProps() {
+        return { ...this.props };
+    }
+    getDirtyProps() {
+        return { ...this.dirtyProps };
+    }
+    getUpdatedPropsFromParent() {
+        return { ...this.updatedPropsFromParent };
+    }
+    flushDirtyPropsToPending() {
+        this.pendingProps = { ...this.dirtyProps };
+        this.dirtyProps = {};
+    }
+    reinitializeAllProps(props) {
+        this.props = props;
+        this.updatedPropsFromParent = {};
+        this.pendingProps = {};
+    }
+    pushPendingPropsBackToDirty() {
+        this.dirtyProps = { ...this.pendingProps, ...this.dirtyProps };
+        this.pendingProps = {};
+    }
+    storeNewPropsFromParent(props) {
+        let changed = false;
+        for (const [key, value] of Object.entries(props)) {
+            const currentValue = this.get(key);
+            if (currentValue !== value) {
+                changed = true;
+            }
+        }
+        if (changed) {
+            this.updatedPropsFromParent = props;
+        }
+        return changed;
     }
 }
-
-class BackendResponse {
-    constructor(response) {
-        this.response = response;
-    }
-    async getBody() {
-        if (!this.body) {
-            this.body = await this.response.text();
-        }
-        return this.body;
-    }
-}
-
-class ChangingItemsTracker {
-    constructor() {
-        this.changedItems = new Map();
-        this.removedItems = new Map();
-    }
-    setItem(itemName, newValue, previousValue) {
-        if (this.removedItems.has(itemName)) {
-            const removedRecord = this.removedItems.get(itemName);
-            this.removedItems.delete(itemName);
-            if (removedRecord.original === newValue) {
-                return;
-            }
-        }
-        if (this.changedItems.has(itemName)) {
-            const originalRecord = this.changedItems.get(itemName);
-            if (originalRecord.original === newValue) {
-                this.changedItems.delete(itemName);
-                return;
-            }
-            this.changedItems.set(itemName, { original: originalRecord.original, new: newValue });
-            return;
-        }
-        this.changedItems.set(itemName, { original: previousValue, new: newValue });
-    }
-    removeItem(itemName, currentValue) {
-        let trueOriginalValue = currentValue;
-        if (this.changedItems.has(itemName)) {
-            const originalRecord = this.changedItems.get(itemName);
-            trueOriginalValue = originalRecord.original;
-            this.changedItems.delete(itemName);
-            if (trueOriginalValue === null) {
-                return;
-            }
-        }
-        if (!this.removedItems.has(itemName)) {
-            this.removedItems.set(itemName, { original: trueOriginalValue });
-        }
-    }
-    getChangedItems() {
-        return Array.from(this.changedItems, ([name, { new: value }]) => ({ name, value }));
-    }
-    getRemovedItems() {
-        return Array.from(this.removedItems.keys());
-    }
-    isEmpty() {
-        return this.changedItems.size === 0 && this.removedItems.size === 0;
-    }
-}
-
-class ElementChanges {
-    constructor() {
-        this.addedClasses = new Set();
-        this.removedClasses = new Set();
-        this.styleChanges = new ChangingItemsTracker();
-        this.attributeChanges = new ChangingItemsTracker();
-    }
-    addClass(className) {
-        if (!this.removedClasses.delete(className)) {
-            this.addedClasses.add(className);
-        }
-    }
-    removeClass(className) {
-        if (!this.addedClasses.delete(className)) {
-            this.removedClasses.add(className);
-        }
-    }
-    addStyle(styleName, newValue, originalValue) {
-        this.styleChanges.setItem(styleName, newValue, originalValue);
-    }
-    removeStyle(styleName, originalValue) {
-        this.styleChanges.removeItem(styleName, originalValue);
-    }
-    addAttribute(attributeName, newValue, originalValue) {
-        this.attributeChanges.setItem(attributeName, newValue, originalValue);
-    }
-    removeAttribute(attributeName, originalValue) {
-        this.attributeChanges.removeItem(attributeName, originalValue);
-    }
-    getAddedClasses() {
-        return [...this.addedClasses];
-    }
-    getRemovedClasses() {
-        return [...this.removedClasses];
-    }
-    getChangedStyles() {
-        return this.styleChanges.getChangedItems();
-    }
-    getRemovedStyles() {
-        return this.styleChanges.getRemovedItems();
-    }
-    getChangedAttributes() {
-        return this.attributeChanges.getChangedItems();
-    }
-    getRemovedAttributes() {
-        return this.attributeChanges.getRemovedItems();
-    }
-    applyToElement(element) {
-        element.classList.add(...this.addedClasses);
-        element.classList.remove(...this.removedClasses);
-        this.styleChanges.getChangedItems().forEach((change) => {
-            element.style.setProperty(change.name, change.value);
-            return;
-        });
-        this.styleChanges.getRemovedItems().forEach((styleName) => {
-            element.style.removeProperty(styleName);
-        });
-        this.attributeChanges.getChangedItems().forEach((change) => {
-            element.setAttribute(change.name, change.value);
-        });
-        this.attributeChanges.getRemovedItems().forEach((attributeName) => {
-            element.removeAttribute(attributeName);
-        });
-    }
-    isEmpty() {
-        return (this.addedClasses.size === 0 &&
-            this.removedClasses.size === 0 &&
-            this.styleChanges.isEmpty() &&
-            this.attributeChanges.isEmpty());
-    }
-}
-
-class ExternalMutationTracker {
-    constructor(element, shouldTrackChangeCallback) {
-        this.changedElements = new WeakMap();
-        this.changedElementsCount = 0;
-        this.addedElements = [];
-        this.removedElements = [];
-        this.isStarted = false;
-        this.element = element;
-        this.shouldTrackChangeCallback = shouldTrackChangeCallback;
-        this.mutationObserver = new MutationObserver(this.onMutations.bind(this));
-    }
-    start() {
-        if (this.isStarted) {
-            return;
-        }
-        this.mutationObserver.observe(this.element, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeOldValue: true,
-        });
-        this.isStarted = true;
-    }
-    stop() {
-        if (this.isStarted) {
-            this.mutationObserver.disconnect();
-            this.isStarted = false;
-        }
-    }
-    getChangedElement(element) {
-        return this.changedElements.has(element) ? this.changedElements.get(element) : null;
-    }
-    getAddedElements() {
-        return this.addedElements;
-    }
-    wasElementAdded(element) {
-        return this.addedElements.includes(element);
-    }
-    handlePendingChanges() {
-        this.onMutations(this.mutationObserver.takeRecords());
-    }
-    onMutations(mutations) {
-        const handledAttributeMutations = new WeakMap();
-        for (const mutation of mutations) {
-            const element = mutation.target;
-            if (!this.shouldTrackChangeCallback(element)) {
-                continue;
-            }
-            if (this.isElementAddedByTranslation(element)) {
-                continue;
-            }
-            let isChangeInAddedElement = false;
-            for (const addedElement of this.addedElements) {
-                if (addedElement.contains(element)) {
-                    isChangeInAddedElement = true;
-                    break;
-                }
-            }
-            if (isChangeInAddedElement) {
-                continue;
-            }
-            switch (mutation.type) {
-                case 'childList':
-                    this.handleChildListMutation(mutation);
-                    break;
-                case 'attributes':
-                    if (!handledAttributeMutations.has(element)) {
-                        handledAttributeMutations.set(element, []);
-                    }
-                    if (!handledAttributeMutations.get(element).includes(mutation.attributeName)) {
-                        this.handleAttributeMutation(mutation);
-                        handledAttributeMutations.set(element, [
-                            ...handledAttributeMutations.get(element),
-                            mutation.attributeName,
-                        ]);
-                    }
-                    break;
-            }
-        }
-    }
-    handleChildListMutation(mutation) {
-        mutation.addedNodes.forEach((node) => {
-            if (!(node instanceof Element)) {
-                return;
-            }
-            if (this.removedElements.includes(node)) {
-                this.removedElements.splice(this.removedElements.indexOf(node), 1);
-                return;
-            }
-            if (this.isElementAddedByTranslation(node)) {
-                return;
-            }
-            this.addedElements.push(node);
-        });
-        mutation.removedNodes.forEach((node) => {
-            if (!(node instanceof Element)) {
-                return;
-            }
-            if (this.addedElements.includes(node)) {
-                this.addedElements.splice(this.addedElements.indexOf(node), 1);
-                return;
-            }
-            this.removedElements.push(node);
-        });
-    }
-    handleAttributeMutation(mutation) {
-        const element = mutation.target;
-        if (!this.changedElements.has(element)) {
-            this.changedElements.set(element, new ElementChanges());
-            this.changedElementsCount++;
-        }
-        const changedElement = this.changedElements.get(element);
-        switch (mutation.attributeName) {
-            case 'class':
-                this.handleClassAttributeMutation(mutation, changedElement);
-                break;
-            case 'style':
-                this.handleStyleAttributeMutation(mutation, changedElement);
-                break;
-            default:
-                this.handleGenericAttributeMutation(mutation, changedElement);
-        }
-        if (changedElement.isEmpty()) {
-            this.changedElements.delete(element);
-            this.changedElementsCount--;
-        }
-    }
-    handleClassAttributeMutation(mutation, elementChanges) {
-        const element = mutation.target;
-        const previousValue = mutation.oldValue || '';
-        const previousValues = previousValue.match(/(\S+)/gu) || [];
-        const newValues = [].slice.call(element.classList);
-        const addedValues = newValues.filter((value) => !previousValues.includes(value));
-        const removedValues = previousValues.filter((value) => !newValues.includes(value));
-        addedValues.forEach((value) => {
-            elementChanges.addClass(value);
-        });
-        removedValues.forEach((value) => {
-            elementChanges.removeClass(value);
-        });
-    }
-    handleStyleAttributeMutation(mutation, elementChanges) {
-        const element = mutation.target;
-        const previousValue = mutation.oldValue || '';
-        const previousStyles = this.extractStyles(previousValue);
-        const newValue = element.getAttribute('style') || '';
-        const newStyles = this.extractStyles(newValue);
-        const addedOrChangedStyles = Object.keys(newStyles).filter((key) => previousStyles[key] === undefined || previousStyles[key] !== newStyles[key]);
-        const removedStyles = Object.keys(previousStyles).filter((key) => !newStyles[key]);
-        addedOrChangedStyles.forEach((style) => {
-            elementChanges.addStyle(style, newStyles[style], previousStyles[style] === undefined ? null : previousStyles[style]);
-        });
-        removedStyles.forEach((style) => {
-            elementChanges.removeStyle(style, previousStyles[style]);
-        });
-    }
-    handleGenericAttributeMutation(mutation, elementChanges) {
-        const attributeName = mutation.attributeName;
-        const element = mutation.target;
-        let oldValue = mutation.oldValue;
-        let newValue = element.getAttribute(attributeName);
-        if (oldValue === attributeName) {
-            oldValue = '';
-        }
-        if (newValue === attributeName) {
-            newValue = '';
-        }
-        if (!element.hasAttribute(attributeName)) {
-            if (oldValue === null) {
-                return;
-            }
-            elementChanges.removeAttribute(attributeName, mutation.oldValue);
-            return;
-        }
-        if (newValue === oldValue) {
-            return;
-        }
-        elementChanges.addAttribute(attributeName, element.getAttribute(attributeName), mutation.oldValue);
-    }
-    extractStyles(styles) {
-        const styleObject = {};
-        styles.split(';').forEach((style) => {
-            const parts = style.split(':');
-            if (parts.length === 1) {
-                return;
-            }
-            const property = parts[0].trim();
-            styleObject[property] = parts.slice(1).join(':').trim();
-        });
-        return styleObject;
-    }
-    isElementAddedByTranslation(element) {
-        return element.tagName === 'FONT' && element.getAttribute('style') === 'vertical-align: inherit;';
-    }
-}
-
-let componentMapByElement = new WeakMap();
-let componentMapByComponent = new Map();
-const registerComponent = (component) => {
-    componentMapByElement.set(component.element, component);
-    componentMapByComponent.set(component, component.name);
-};
-const unregisterComponent = (component) => {
-    componentMapByElement.delete(component.element);
-    componentMapByComponent.delete(component);
-};
-const getComponent = (element) => new Promise((resolve, reject) => {
-    let count = 0;
-    const maxCount = 10;
-    const interval = setInterval(() => {
-        const component = componentMapByElement.get(element);
-        if (component) {
-            clearInterval(interval);
-            resolve(component);
-        }
-        count++;
-        if (count > maxCount) {
-            clearInterval(interval);
-            reject(new Error(`Component not found for element ${getElementAsTagText(element)}`));
-        }
-    }, 5);
-});
-const findComponents = (currentComponent, onlyParents, onlyMatchName) => {
-    const components = [];
-    componentMapByComponent.forEach((componentName, component) => {
-        if (onlyParents && (currentComponent === component || !component.element.contains(currentComponent.element))) {
-            return;
-        }
-        if (onlyMatchName && componentName !== onlyMatchName) {
-            return;
-        }
-        components.push(component);
-    });
-    return components;
-};
-const findChildren = (currentComponent) => {
-    const children = [];
-    componentMapByComponent.forEach((componentName, component) => {
-        if (currentComponent === component) {
-            return;
-        }
-        if (!currentComponent.element.contains(component.element)) {
-            return;
-        }
-        let foundChildComponent = false;
-        componentMapByComponent.forEach((childComponentName, childComponent) => {
-            if (foundChildComponent) {
-                return;
-            }
-            if (childComponent === component) {
-                return;
-            }
-            if (childComponent.element.contains(component.element)) {
-                foundChildComponent = true;
-            }
-        });
-        children.push(component);
-    });
-    return children;
-};
-const findParent = (currentComponent) => {
-    let parentElement = currentComponent.element.parentElement;
-    while (parentElement) {
-        const component = componentMapByElement.get(parentElement);
-        if (component) {
-            return component;
-        }
-        parentElement = parentElement.parentElement;
-    }
-    return null;
-};
 
 class Component {
     constructor(element, name, props, listeners, id, backend, elementDriver) {
@@ -2216,107 +2317,6 @@ function proxifyComponent(component) {
     });
 }
 
-class BackendRequest {
-    constructor(promise, actions, updateModels) {
-        this.isResolved = false;
-        this.promise = promise;
-        this.promise.then((response) => {
-            this.isResolved = true;
-            return response;
-        });
-        this.actions = actions;
-        this.updatedModels = updateModels;
-    }
-    containsOneOfActions(targetedActions) {
-        return this.actions.filter((action) => targetedActions.includes(action)).length > 0;
-    }
-    areAnyModelsUpdated(targetedModels) {
-        return this.updatedModels.filter((model) => targetedModels.includes(model)).length > 0;
-    }
-}
-
-class RequestBuilder {
-    constructor(url, method = 'post') {
-        this.url = url;
-        this.method = method;
-    }
-    buildRequest(props, actions, updated, children, updatedPropsFromParent, files) {
-        const splitUrl = this.url.split('?');
-        let [url] = splitUrl;
-        const [, queryString] = splitUrl;
-        const params = new URLSearchParams(queryString || '');
-        const fetchOptions = {};
-        fetchOptions.headers = {
-            Accept: 'application/vnd.live-component+html',
-            'X-Requested-With': 'XMLHttpRequest',
-        };
-        const totalFiles = Object.entries(files).reduce((total, current) => total + current.length, 0);
-        const hasFingerprints = Object.keys(children).length > 0;
-        if (actions.length === 0 &&
-            totalFiles === 0 &&
-            this.method === 'get' &&
-            this.willDataFitInUrl(JSON.stringify(props), JSON.stringify(updated), params, JSON.stringify(children), JSON.stringify(updatedPropsFromParent))) {
-            params.set('props', JSON.stringify(props));
-            params.set('updated', JSON.stringify(updated));
-            if (Object.keys(updatedPropsFromParent).length > 0) {
-                params.set('propsFromParent', JSON.stringify(updatedPropsFromParent));
-            }
-            if (hasFingerprints) {
-                params.set('children', JSON.stringify(children));
-            }
-            fetchOptions.method = 'GET';
-        }
-        else {
-            fetchOptions.method = 'POST';
-            const requestData = { props, updated };
-            if (Object.keys(updatedPropsFromParent).length > 0) {
-                requestData.propsFromParent = updatedPropsFromParent;
-            }
-            if (hasFingerprints) {
-                requestData.children = children;
-            }
-            if (actions.length > 0) {
-                if (actions.length === 1) {
-                    requestData.args = actions[0].args;
-                    url += `/${encodeURIComponent(actions[0].name)}`;
-                }
-                else {
-                    url += '/_batch';
-                    requestData.actions = actions;
-                }
-            }
-            const formData = new FormData();
-            formData.append('data', JSON.stringify(requestData));
-            for (const [key, value] of Object.entries(files)) {
-                const length = value.length;
-                for (let i = 0; i < length; ++i) {
-                    formData.append(key, value[i]);
-                }
-            }
-            fetchOptions.body = formData;
-        }
-        const paramsString = params.toString();
-        return {
-            url: `${url}${paramsString.length > 0 ? `?${paramsString}` : ''}`,
-            fetchOptions,
-        };
-    }
-    willDataFitInUrl(propsJson, updatedJson, params, childrenJson, propsFromParentJson) {
-        const urlEncodedJsonData = new URLSearchParams(propsJson + updatedJson + childrenJson + propsFromParentJson).toString();
-        return (urlEncodedJsonData + params.toString()).length < 1500;
-    }
-}
-
-class Backend {
-    constructor(url, method = 'post') {
-        this.requestBuilder = new RequestBuilder(url, method);
-    }
-    makeRequest(props, actions, updated, children, updatedPropsFromParent, files) {
-        const { url, fetchOptions } = this.requestBuilder.buildRequest(props, actions, updated, children, updatedPropsFromParent, files);
-        return new BackendRequest(fetch(url, fetchOptions), actions.map((backendAction) => backendAction.name), Object.keys(updated));
-    }
-}
-
 class StimulusElementDriver {
     constructor(controller) {
         this.controller = controller;
@@ -2336,6 +2336,117 @@ class StimulusElementDriver {
     }
     getBrowserEventsToDispatch() {
         return this.controller.eventsToDispatchValue;
+    }
+}
+
+function getModelBinding (modelDirective) {
+    let shouldRender = true;
+    let targetEventName = null;
+    let debounce = false;
+    modelDirective.modifiers.forEach((modifier) => {
+        switch (modifier.name) {
+            case 'on':
+                if (!modifier.value) {
+                    throw new Error(`The "on" modifier in ${modelDirective.getString()} requires a value - e.g. on(change).`);
+                }
+                if (!['input', 'change'].includes(modifier.value)) {
+                    throw new Error(`The "on" modifier in ${modelDirective.getString()} only accepts the arguments "input" or "change".`);
+                }
+                targetEventName = modifier.value;
+                break;
+            case 'norender':
+                shouldRender = false;
+                break;
+            case 'debounce':
+                debounce = modifier.value ? Number.parseInt(modifier.value) : true;
+                break;
+            default:
+                throw new Error(`Unknown modifier "${modifier.name}" in data-model="${modelDirective.getString()}".`);
+        }
+    });
+    const [modelName, innerModelName] = modelDirective.action.split(':');
+    return {
+        modelName,
+        innerModelName: innerModelName || null,
+        shouldRender,
+        debounce,
+        targetEventName,
+    };
+}
+
+class ChildComponentPlugin {
+    constructor(component) {
+        this.parentModelBindings = [];
+        this.component = component;
+        const modelDirectives = getAllModelDirectiveFromElements(this.component.element);
+        this.parentModelBindings = modelDirectives.map(getModelBinding);
+    }
+    attachToComponent(component) {
+        component.on('request:started', (requestData) => {
+            requestData.children = this.getChildrenFingerprints();
+        });
+        component.on('model:set', (model, value) => {
+            this.notifyParentModelChange(model, value);
+        });
+    }
+    getChildrenFingerprints() {
+        const fingerprints = {};
+        this.getChildren().forEach((child) => {
+            if (!child.id) {
+                throw new Error('missing id');
+            }
+            fingerprints[child.id] = {
+                fingerprint: child.fingerprint,
+                tag: child.element.tagName.toLowerCase(),
+            };
+        });
+        return fingerprints;
+    }
+    notifyParentModelChange(modelName, value) {
+        const parentComponent = findParent(this.component);
+        if (!parentComponent) {
+            return;
+        }
+        this.parentModelBindings.forEach((modelBinding) => {
+            const childModelName = modelBinding.innerModelName || 'value';
+            if (childModelName !== modelName) {
+                return;
+            }
+            parentComponent.set(modelBinding.modelName, value, modelBinding.shouldRender, modelBinding.debounce);
+        });
+    }
+    getChildren() {
+        return findChildren(this.component);
+    }
+}
+
+class LazyPlugin {
+    constructor() {
+        this.intersectionObserver = null;
+    }
+    attachToComponent(component) {
+        if ('lazy' !== component.element.attributes.getNamedItem('loading')?.value) {
+            return;
+        }
+        component.on('connect', () => {
+            this.getObserver().observe(component.element);
+        });
+        component.on('disconnect', () => {
+            this.intersectionObserver?.unobserve(component.element);
+        });
+    }
+    getObserver() {
+        if (!this.intersectionObserver) {
+            this.intersectionObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.dispatchEvent(new CustomEvent('live:appear'));
+                        observer.unobserve(entry.target);
+                    }
+                });
+            });
+        }
+        return this.intersectionObserver;
     }
 }
 
@@ -2514,23 +2625,6 @@ const parseLoadingAction = (action, isLoading) => {
     throw new Error(`Unknown data-loading action "${action}"`);
 };
 
-class ValidatedFieldsPlugin {
-    attachToComponent(component) {
-        component.on('model:set', (modelName) => {
-            this.handleModelSet(modelName, component.valueStore);
-        });
-    }
-    handleModelSet(modelName, valueStore) {
-        if (valueStore.has('validatedFields')) {
-            const validatedFields = [...valueStore.get('validatedFields')];
-            if (!validatedFields.includes(modelName)) {
-                validatedFields.push(modelName);
-            }
-            valueStore.set('validatedFields', validatedFields);
-        }
-    }
-}
-
 class PageUnloadingPlugin {
     constructor() {
         this.isConnected = false;
@@ -2645,77 +2739,6 @@ class PollingPlugin {
             this.addPoll(directive.action, duration);
         });
     }
-}
-
-class SetValueOntoModelFieldsPlugin {
-    attachToComponent(component) {
-        this.synchronizeValueOfModelFields(component);
-        component.on('render:finished', () => {
-            this.synchronizeValueOfModelFields(component);
-        });
-    }
-    synchronizeValueOfModelFields(component) {
-        component.element.querySelectorAll('[data-model]').forEach((element) => {
-            if (!(element instanceof HTMLElement)) {
-                throw new Error('Invalid element using data-model.');
-            }
-            if (element instanceof HTMLFormElement) {
-                return;
-            }
-            if (!elementBelongsToThisComponent(element, component)) {
-                return;
-            }
-            const modelDirective = getModelDirectiveFromElement(element);
-            if (!modelDirective) {
-                return;
-            }
-            const modelName = modelDirective.action;
-            if (component.getUnsyncedModels().includes(modelName)) {
-                return;
-            }
-            if (component.valueStore.has(modelName)) {
-                setValueOnElement(element, component.valueStore.get(modelName));
-            }
-            if (element instanceof HTMLSelectElement && !element.multiple) {
-                component.valueStore.set(modelName, getValueFromElement(element, component.valueStore));
-            }
-        });
-    }
-}
-
-function getModelBinding (modelDirective) {
-    let shouldRender = true;
-    let targetEventName = null;
-    let debounce = false;
-    modelDirective.modifiers.forEach((modifier) => {
-        switch (modifier.name) {
-            case 'on':
-                if (!modifier.value) {
-                    throw new Error(`The "on" modifier in ${modelDirective.getString()} requires a value - e.g. on(change).`);
-                }
-                if (!['input', 'change'].includes(modifier.value)) {
-                    throw new Error(`The "on" modifier in ${modelDirective.getString()} only accepts the arguments "input" or "change".`);
-                }
-                targetEventName = modifier.value;
-                break;
-            case 'norender':
-                shouldRender = false;
-                break;
-            case 'debounce':
-                debounce = modifier.value ? Number.parseInt(modifier.value) : true;
-                break;
-            default:
-                throw new Error(`Unknown modifier "${modifier.name}" in data-model="${modelDirective.getString()}".`);
-        }
-    });
-    const [modelName, innerModelName] = modelDirective.action.split(':');
-    return {
-        modelName,
-        innerModelName: innerModelName || null,
-        shouldRender,
-        debounce,
-        targetEventName,
-    };
 }
 
 function isValueEmpty(value) {
@@ -2841,79 +2864,56 @@ class QueryStringPlugin {
     }
 }
 
-class ChildComponentPlugin {
-    constructor(component) {
-        this.parentModelBindings = [];
-        this.component = component;
-        const modelDirectives = getAllModelDirectiveFromElements(this.component.element);
-        this.parentModelBindings = modelDirectives.map(getModelBinding);
-    }
+class SetValueOntoModelFieldsPlugin {
     attachToComponent(component) {
-        component.on('request:started', (requestData) => {
-            requestData.children = this.getChildrenFingerprints();
-        });
-        component.on('model:set', (model, value) => {
-            this.notifyParentModelChange(model, value);
+        this.synchronizeValueOfModelFields(component);
+        component.on('render:finished', () => {
+            this.synchronizeValueOfModelFields(component);
         });
     }
-    getChildrenFingerprints() {
-        const fingerprints = {};
-        this.getChildren().forEach((child) => {
-            if (!child.id) {
-                throw new Error('missing id');
+    synchronizeValueOfModelFields(component) {
+        component.element.querySelectorAll('[data-model]').forEach((element) => {
+            if (!(element instanceof HTMLElement)) {
+                throw new Error('Invalid element using data-model.');
             }
-            fingerprints[child.id] = {
-                fingerprint: child.fingerprint,
-                tag: child.element.tagName.toLowerCase(),
-            };
-        });
-        return fingerprints;
-    }
-    notifyParentModelChange(modelName, value) {
-        const parentComponent = findParent(this.component);
-        if (!parentComponent) {
-            return;
-        }
-        this.parentModelBindings.forEach((modelBinding) => {
-            const childModelName = modelBinding.innerModelName || 'value';
-            if (childModelName !== modelName) {
+            if (element instanceof HTMLFormElement) {
                 return;
             }
-            parentComponent.set(modelBinding.modelName, value, modelBinding.shouldRender, modelBinding.debounce);
+            if (!elementBelongsToThisComponent(element, component)) {
+                return;
+            }
+            const modelDirective = getModelDirectiveFromElement(element);
+            if (!modelDirective) {
+                return;
+            }
+            const modelName = modelDirective.action;
+            if (component.getUnsyncedModels().includes(modelName)) {
+                return;
+            }
+            if (component.valueStore.has(modelName)) {
+                setValueOnElement(element, component.valueStore.get(modelName));
+            }
+            if (element instanceof HTMLSelectElement && !element.multiple) {
+                component.valueStore.set(modelName, getValueFromElement(element, component.valueStore));
+            }
         });
-    }
-    getChildren() {
-        return findChildren(this.component);
     }
 }
 
-class LazyPlugin {
-    constructor() {
-        this.intersectionObserver = null;
-    }
+class ValidatedFieldsPlugin {
     attachToComponent(component) {
-        if ('lazy' !== component.element.attributes.getNamedItem('loading')?.value) {
-            return;
-        }
-        component.on('connect', () => {
-            this.getObserver().observe(component.element);
-        });
-        component.on('disconnect', () => {
-            this.intersectionObserver?.unobserve(component.element);
+        component.on('model:set', (modelName) => {
+            this.handleModelSet(modelName, component.valueStore);
         });
     }
-    getObserver() {
-        if (!this.intersectionObserver) {
-            this.intersectionObserver = new IntersectionObserver((entries, observer) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting) {
-                        entry.target.dispatchEvent(new CustomEvent('live:appear'));
-                        observer.unobserve(entry.target);
-                    }
-                });
-            });
+    handleModelSet(modelName, valueStore) {
+        if (valueStore.has('validatedFields')) {
+            const validatedFields = [...valueStore.get('validatedFields')];
+            if (!validatedFields.includes(modelName)) {
+                validatedFields.push(modelName);
+            }
+            valueStore.set('validatedFields', validatedFields);
         }
-        return this.intersectionObserver;
     }
 }
 

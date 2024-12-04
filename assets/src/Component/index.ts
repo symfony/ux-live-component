@@ -1,16 +1,16 @@
 import type { BackendAction, BackendInterface } from '../Backend/Backend';
-import ValueStore from './ValueStore';
-import { normalizeModelName } from '../string_utils';
 import type BackendRequest from '../Backend/BackendRequest';
+import BackendResponse from '../Backend/BackendResponse';
+import { findComponents, registerComponent, unregisterComponent } from '../ComponentRegistry';
+import HookManager from '../HookManager';
+import ExternalMutationTracker from '../Rendering/ExternalMutationTracker';
 import { elementBelongsToThisComponent, getValueFromElement, htmlToElement } from '../dom_utils';
 import { executeMorphdom } from '../morphdom';
-import UnsyncedInputsTracker from './UnsyncedInputsTracker';
+import { normalizeModelName } from '../string_utils';
 import type { ElementDriver } from './ElementDriver';
-import HookManager from '../HookManager';
+import UnsyncedInputsTracker from './UnsyncedInputsTracker';
+import ValueStore from './ValueStore';
 import type { PluginInterface } from './plugins/PluginInterface';
-import BackendResponse from '../Backend/BackendResponse';
-import ExternalMutationTracker from '../Rendering/ExternalMutationTracker';
-import { findComponents, registerComponent, unregisterComponent } from '../ComponentRegistry';
 
 declare const Turbo: any;
 

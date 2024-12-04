@@ -1,14 +1,14 @@
 import { Application } from '@hotwired/stimulus';
-import LiveController from '../src/live_controller';
 import { waitFor } from '@testing-library/dom';
-import { htmlToElement } from '../src/dom_utils';
-import Component from '../src/Component';
+import { Response } from 'node-fetch';
 import type { BackendAction, BackendInterface, ChildrenFingerprints } from '../src/Backend/Backend';
 import BackendRequest from '../src/Backend/BackendRequest';
-import { Response } from 'node-fetch';
-import { setDeepData } from '../src/data_manipulation_utils';
-import LiveControllerDefault from '../src/live_controller';
+import Component from '../src/Component';
 import type { ElementDriver } from '../src/Component/ElementDriver';
+import { setDeepData } from '../src/data_manipulation_utils';
+import { htmlToElement } from '../src/dom_utils';
+import LiveController from '../src/live_controller';
+import LiveControllerDefault from '../src/live_controller';
 
 let activeTests: FunctionalTest[] = [];
 

@@ -1,6 +1,6 @@
-import type Component from '../index';
 import { parseDirectives } from '../../Directive/directives_parser';
 import PollingDirector from '../../PollingDirector';
+import type Component from '../index';
 import type { PluginInterface } from './PluginInterface';
 
 export default class implements PluginInterface {
