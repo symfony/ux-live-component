@@ -7,11 +7,11 @@
  * file that was distributed with this source code.
  */
 
-import { createTest, initComponent, shutdownTests, startStimulus } from '../tools';
-import { htmlToElement } from '../../src/dom_utils';
 import Component from '../../src/Component';
-import { getComponent } from '../../src/live_controller';
 import { findComponents } from '../../src/ComponentRegistry';
+import { htmlToElement } from '../../src/dom_utils';
+import { getComponent } from '../../src/live_controller';
+import { createTest, initComponent, shutdownTests, startStimulus } from '../tools';
 
 describe('LiveController Basic Tests', () => {
     afterEach(() => {

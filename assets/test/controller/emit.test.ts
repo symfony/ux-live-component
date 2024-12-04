@@ -7,8 +7,8 @@
  * file that was distributed with this source code.
  */
 
-import { createTest, initComponent, shutdownTests } from '../tools';
 import { getByText, waitFor } from '@testing-library/dom';
+import { createTest, initComponent, shutdownTests } from '../tools';
 
 describe('LiveController Emit Tests', () => {
     afterEach(() => {

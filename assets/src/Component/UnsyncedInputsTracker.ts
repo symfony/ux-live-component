@@ -1,5 +1,5 @@
-import type { ElementDriver } from './ElementDriver';
 import { elementBelongsToThisComponent } from '../dom_utils';
+import type { ElementDriver } from './ElementDriver';
 import type Component from './index';
 
 export default class {

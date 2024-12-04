@@ -7,8 +7,8 @@
  * file that was distributed with this source code.
  */
 
-import { createTest, initComponent, shutdownTests, setCurrentSearch, expectCurrentSearch } from '../tools';
 import { getByText, waitFor } from '@testing-library/dom';
+import { createTest, expectCurrentSearch, initComponent, setCurrentSearch, shutdownTests } from '../tools';
 
 describe('LiveController query string binding', () => {
     afterEach(() => {

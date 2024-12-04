@@ -7,10 +7,10 @@
  * file that was distributed with this source code.
  */
 
-import { shutdownTests, createTest, initComponent } from '../tools';
 import { getByTestId, getByText, waitFor } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
 import { htmlToElement } from '../../src/dom_utils';
+import { createTest, initComponent, shutdownTests } from '../tools';
 
 describe('LiveController rendering Tests', () => {
     afterEach(() => {

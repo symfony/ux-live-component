@@ -7,19 +7,19 @@
  * file that was distributed with this source code.
  */
 
-import {
-    createTestForExistingComponent,
-    createTest,
-    initComponent,
-    shutdownTests,
-    getComponent,
-    dataToJsonAttribute,
-    getStimulusApplication,
-} from '../tools';
+import { Controller } from '@hotwired/stimulus';
 import { getByTestId, waitFor } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
 import { findChildren } from '../../src/ComponentRegistry';
-import { Controller } from '@hotwired/stimulus';
+import {
+    createTest,
+    createTestForExistingComponent,
+    dataToJsonAttribute,
+    getComponent,
+    getStimulusApplication,
+    initComponent,
+    shutdownTests,
+} from '../tools';
 
 describe('Component parent -> child initialization and rendering tests', () => {
     afterEach(() => {

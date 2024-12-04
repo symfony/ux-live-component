@@ -1,5 +1,5 @@
-import { htmlToElement } from '../../src/dom_utils';
 import getElementAsTagText from '../../src/Util/getElementAsTagText';
+import { htmlToElement } from '../../src/dom_utils';
 
 describe('getElementAsTagText', () => {
     it('returns self-closing tag correctly', () => {

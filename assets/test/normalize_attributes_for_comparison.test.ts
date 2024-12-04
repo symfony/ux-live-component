@@ -1,5 +1,5 @@
-import { normalizeAttributesForComparison } from '../src/normalize_attributes_for_comparison';
 import { htmlToElement } from '../src/dom_utils';
+import { normalizeAttributesForComparison } from '../src/normalize_attributes_for_comparison';
 
 describe('normalizeAttributesForComparison', () => {
     it('makes no changes if value and attribute not set', () => {

@@ -7,9 +7,9 @@
  * file that was distributed with this source code.
  */
 
-import { shutdownTests, createTest, initComponent } from '../tools';
 import { getByTestId } from '@testing-library/dom';
 import { htmlToElement } from '../../src/dom_utils';
+import { createTest, initComponent, shutdownTests } from '../tools';
 
 describe('LiveController rendering with external changes tests', () => {
     afterEach(() => {
