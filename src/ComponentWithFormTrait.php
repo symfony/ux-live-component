@@ -265,7 +265,7 @@ trait ComponentWithFormTrait
                 && $child->vars['required']
                 && !$child->vars['disabled']
                 && !$child->vars['value']
-                && !$child->vars['placeholder']
+                && (false === $child->vars['placeholder'] || null === $child->vars['placeholder'])
                 && !$child->vars['multiple']
                 && !$child->vars['expanded']
                 && $child->vars['choices']
