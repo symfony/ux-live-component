@@ -181,6 +181,51 @@ let's keep going because… things get cooler.
     Need to do some extra data initialization on your component? Create
     a ``mount()`` method or use the ``PostMount`` hook: `Twig Component mount documentation`_.
 
+Hooks: Handle Component Behavior
+--------------------------------
+Most of the time, you'll just pass data to your components and 
+let it handle the rest. However, if you need to do something 
+more complex during certain stages of a component's lifecycle, you 
+can take advantage of lifecycle hooks.
+
+``PostHydrate`` Hook
+~~~~~~~~~~~~~~~~~~~~
+The ``#[PostHydrate]`` hook is called immediately after the component's state 
+is loaded from the client. This is useful if you need to process or adjust 
+the data once it’s been hydrated.
+
+``PreDehydrate`` Hook
+~~~~~~~~~~~~~~~~~~~~~
+The ``#[PreDehydrate]`` hook is triggered just before your component’s state 
+is sent back to the client. You can use this to modify or clean up the data 
+before it’s serialized and returned to the client.
+
+``PreReRender`` Hook
+~~~~~~~~~~~~~~~~~~~~
+The ``#[PreReRender]`` hook is called before your component is re-rendered 
+during an HTTP request. It does not run during the initial render but is 
+helpful when you need to adjust the state before sending it back to 
+the client for re-rendering.
+
+Hook Priority
+~~~~~~~~~~~~~
+You can control the order in which hooks are executed by using the ``priority`` 
+argument. If multiple hooks of the same type are registered in a component, those 
+with a higher priority value will run first. This allows you to manage the order 
+in which your actions are performed within the same lifecycle stage::
+    
+    #[PostHydrate(priority: 10)]
+    public function highPriorityHook(): void
+    {
+        // Runs first
+    }
+    
+    #[PostHydrate(priority: 1)]
+    public function lowPriorityHook(): void
+    {
+        // Runs last
+    }
+
 LiveProps: Stateful Component Properties
 ----------------------------------------
 
