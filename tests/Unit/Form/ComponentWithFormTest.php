@@ -44,6 +44,7 @@ class ComponentWithFormTest extends KernelTestCase
                 'range' => '',
                 'choice' => '',
                 'choice_required_with_placeholder' => '',
+                'choice_required_with_empty_placeholder' => '',
                 'choice_required_without_placeholder' => '2',
                 'choice_expanded' => '',
                 'choice_multiple' => ['2'],
