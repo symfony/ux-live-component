@@ -52,6 +52,13 @@ class FormWithManyDifferentFieldsType extends AbstractType
                 ],
                 'placeholder' => 'foo',
             ])
+            ->add('choice_required_with_empty_placeholder', ChoiceType::class, [
+                'choices' => [
+                    'bar' => 2,
+                    'foo' => 1,
+                ],
+                'placeholder' => '',
+            ])
             ->add('choice_required_without_placeholder', ChoiceType::class, [
                 'choices' => [
                     'bar' => 2,
