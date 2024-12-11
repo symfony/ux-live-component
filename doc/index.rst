@@ -110,7 +110,7 @@ Suppose you've already built a basic Twig component::
 
     use Symfony\UX\TwigComponent\Attribute\AsTwigComponent;
 
-    #[AsTwigComponent()]
+    #[AsTwigComponent]
     class RandomNumber
     {
         public function getRandomNumber(): int
@@ -138,7 +138,7 @@ re-rendered live on the frontend), replace the component's
     + use Symfony\UX\LiveComponent\Attribute\AsLiveComponent;
     + use Symfony\UX\LiveComponent\DefaultActionTrait;
 
-    - #[AsTwigComponent()]
+    - #[AsTwigComponent]
     + #[AsLiveComponent]
       class RandomNumber
       {
@@ -1221,7 +1221,7 @@ You can also pass arguments to your action by adding each as a
     </form>
 
 In your component, to allow each argument to be passed, add
-the ``#[LiveArg()]`` attribute::
+the ``#[LiveArg]`` attribute::
 
     // src/Twig/Components/ItemList.php
     namespace App\Twig\Components;
@@ -1244,15 +1244,17 @@ the ``#[LiveArg()]`` attribute::
 Actions and CSRF Protection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When you trigger an action, a POST request is sent that contains a
-custom ``Accept`` header. This header is automatically populated and
-validated. In other words… you get CSRF protection without any work
-thanks to same-origin / CORS policies implemented by browsers.
+When an action is triggered, a POST request is sent with a custom ``Accept``
+header. This header is automatically set and validated for you. In other
+words, you benefit from CSRF protection effortlessly, thanks to the
+``same-origin`` and ``CORS`` policies enforced by browsers.
 
-If you want this built-in CSRF protection to be effective, mind your
-CORS headers (e.g. *DO NOT* use `Access-Control-Allow-Origin: *`).
+.. warning::
 
-(In test-mode, the CSRF protection is disabled to make testing easier.)
+	To ensure this built-in CSRF protection remains effective, pay attention
+	to your CORS headers (e.g. *DO NOT* use ``Access-Control-Allow-Origin: *``).
+
+In test-mode, the CSRF protection is disabled to make testing easier.
 
 Actions, Redirecting and AbstractController
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2972,7 +2974,7 @@ However, if the user adds a *new* todo item then we *do* want the ``TodoFooter``
 child component to re-render: using the new ``count`` value. To trigger this,
 in the ``TodoFooter`` component, add the ``updateFromParent`` option::
 
-    #[LiveComponent()]
+    #[LiveComponent]
     class TodoFooter
     {
         #[LiveProp(updateFromParent: true)]
