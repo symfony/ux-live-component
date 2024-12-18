@@ -18,6 +18,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
+use Symfony\Component\DependencyInjection\Parameter;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\UX\LiveComponent\Attribute\AsLiveComponent;
 use Symfony\UX\LiveComponent\ComponentValidator;
@@ -127,6 +128,7 @@ final class LiveComponentExtension extends Extension implements PrependExtension
             ->addTag('container.service_subscriber', ['key' => ComponentRenderer::class, 'id' => 'ux.twig_component.component_renderer'])
             ->addTag('container.service_subscriber', ['key' => LiveComponentHydrator::class, 'id' => 'ux.live_component.component_hydrator'])
             ->addTag('container.service_subscriber', ['key' => LiveComponentMetadataFactory::class, 'id' => 'ux.live_component.metadata_factory'])
+            ->addTag('container.service_subscriber') // csrf
         ;
 
         $container->register('ux.live_component.live_responder', LiveResponder::class);
@@ -203,6 +205,7 @@ final class LiveComponentExtension extends Extension implements PrependExtension
                 new Reference('ux.live_component.fingerprint_calculator'),
                 new Reference('router'),
                 new Reference('ux.live_component.live_responder'),
+                new Reference('security.csrf.token_manager', ContainerInterface::NULL_ON_INVALID_REFERENCE),
                 new Reference('ux.live_component.twig.template_mapper'),
             ])
         ;
@@ -253,7 +256,7 @@ final class LiveComponentExtension extends Extension implements PrependExtension
             ->setArguments([
                 new Reference('twig.template_iterator'),
                 self::TEMPLATES_MAP_FILENAME,
-                '%kernel.secret%',
+                new Parameter('container.build_hash'),
             ])
             ->addTag('kernel.cache_warmer');
     }
