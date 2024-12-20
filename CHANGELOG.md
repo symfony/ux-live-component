@@ -1,5 +1,7 @@
 # CHANGELOG
 
+-   Use container.build_hash instead of kernel.secret in CacheWarmer
+
 ## 2.22.0
 
 -   Remove CSRF tokens - rely on same-origin/CORS instead
