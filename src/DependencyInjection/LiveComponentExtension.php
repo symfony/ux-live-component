@@ -12,6 +12,10 @@
 namespace Symfony\UX\LiveComponent\DependencyInjection;
 
 use Symfony\Component\AssetMapper\AssetMapperInterface;
+use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
+use Symfony\Component\Config\Definition\Builder\TreeBuilder;
+use Symfony\Component\Config\Definition\ConfigurationInterface;
+use Symfony\Component\DependencyInjection\Argument\TaggedIteratorArgument;
 use Symfony\Component\DependencyInjection\ChildDefinition;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -50,14 +54,12 @@ use Symfony\UX\LiveComponent\Util\TwigAttributeHelperFactory;
 use Symfony\UX\TwigComponent\ComponentFactory;
 use Symfony\UX\TwigComponent\ComponentRenderer;
 
-use function Symfony\Component\DependencyInjection\Loader\Configurator\tagged_iterator;
-
 /**
  * @author Kevin Bond <kevinbond@gmail.com>
  *
  * @internal
  */
-final class LiveComponentExtension extends Extension implements PrependExtensionInterface
+final class LiveComponentExtension extends Extension implements PrependExtensionInterface, ConfigurationInterface
 {
     public const TEMPLATES_MAP_FILENAME = 'live_components_twig_templates.map';
 
@@ -93,16 +95,19 @@ final class LiveComponentExtension extends Extension implements PrependExtension
             }
         );
 
+        $configuration = $this->getConfiguration($configs, $container);
+        $config = $this->processConfiguration($configuration, $configs);
+
         $container->registerForAutoconfiguration(HydrationExtensionInterface::class)
             ->addTag(LiveComponentBundle::HYDRATION_EXTENSION_TAG);
 
         $container->register('ux.live_component.component_hydrator', LiveComponentHydrator::class)
             ->setArguments([
-                tagged_iterator(LiveComponentBundle::HYDRATION_EXTENSION_TAG),
+                new TaggedIteratorArgument(LiveComponentBundle::HYDRATION_EXTENSION_TAG),
                 new Reference('property_accessor'),
                 new Reference('ux.live_component.metadata_factory'),
                 new Reference('serializer', ContainerInterface::NULL_ON_INVALID_REFERENCE),
-                '%kernel.secret%',
+                $config['secret'], // defaults to '%kernel.secret%'
             ])
         ;
 
@@ -236,7 +241,7 @@ final class LiveComponentExtension extends Extension implements PrependExtension
 
         $container->register('ux.live_component.deterministic_id_calculator', DeterministicTwigIdCalculator::class);
         $container->register('ux.live_component.fingerprint_calculator', FingerprintCalculator::class)
-            ->setArguments(['%kernel.secret%']);
+            ->setArguments([$config['secret']]); // default to %kernel.secret%
 
         $container->setAlias(ComponentValidatorInterface::class, ComponentValidator::class);
 
@@ -256,6 +261,35 @@ final class LiveComponentExtension extends Extension implements PrependExtension
                 '%kernel.secret%',
             ])
             ->addTag('kernel.cache_warmer');
+    }
+
+    public function getConfigTreeBuilder(): TreeBuilder
+    {
+        $treeBuilder = new TreeBuilder('live_component');
+        $rootNode = $treeBuilder->getRootNode();
+        \assert($rootNode instanceof ArrayNodeDefinition);
+
+        $rootNode
+            ->addDefaultsIfNotSet()
+            ->children()
+                ->scalarNode('secret')
+                    ->info('The secret used to compute fingerprints and checksums')
+                    ->beforeNormalization()
+                        ->ifString()
+                        ->then(trim(...))
+                    ->end()
+                    ->cannotBeEmpty()
+                    ->defaultValue('%kernel.secret%')
+                ->end()
+            ->end()
+        ;
+
+        return $treeBuilder;
+    }
+
+    public function getConfiguration(array $config, ContainerBuilder $container): ConfigurationInterface
+    {
+        return $this;
     }
 
     private function isAssetMapperAvailable(ContainerBuilder $container): bool
