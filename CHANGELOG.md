@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.23.0
+
+-   Allow configuring the secret used to compute fingerprints and checksums.
+
 ## 2.22.0
 
 -   Remove CSRF tokens - rely on same-origin/CORS instead
