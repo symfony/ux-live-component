@@ -24,11 +24,14 @@ use Symfony\UX\LiveComponent\Metadata\LiveComponentMetadata;
  *
  * @internal
  */
-class FingerprintCalculator
+final class FingerprintCalculator
 {
     public function __construct(
-        private string $secret,
+        #[\SensitiveParameter] private string $secret,
     ) {
+        if (!$secret) {
+            throw new \InvalidArgumentException('A non-empty secret is required.');
+        }
     }
 
     public function calculateFingerprint(array $inputProps, LiveComponentMetadata $liveMetadata): string
