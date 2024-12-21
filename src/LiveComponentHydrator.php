@@ -50,8 +50,11 @@ final class LiveComponentHydrator
         private PropertyAccessorInterface $propertyAccessor,
         private LiveComponentMetadataFactory $liveComponentMetadataFactory,
         private NormalizerInterface|DenormalizerInterface|null $serializer,
-        private string $secret,
+        #[\SensitiveParameter] private string $secret,
     ) {
+        if (!$secret) {
+            throw new \InvalidArgumentException('A non-empty secret is required.');
+        }
     }
 
     public function dehydrate(object $component, ComponentAttributes $attributes, LiveComponentMetadata $componentMetadata): DehydratedProps
