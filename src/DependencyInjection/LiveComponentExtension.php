@@ -22,6 +22,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
+use Symfony\Component\DependencyInjection\Parameter;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\UX\LiveComponent\Attribute\AsLiveComponent;
 use Symfony\UX\LiveComponent\ComponentValidator;
@@ -258,7 +259,7 @@ final class LiveComponentExtension extends Extension implements PrependExtension
             ->setArguments([
                 new Reference('twig.template_iterator'),
                 self::TEMPLATES_MAP_FILENAME,
-                '%kernel.secret%',
+                new Parameter('container.build_hash'),
             ])
             ->addTag('kernel.cache_warmer');
     }
