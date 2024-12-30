@@ -1455,9 +1455,7 @@ or omit it entirely to let the ``initialFormData`` property default to ``null``:
     {# templates/post/new.html.twig #}
     {# ... #}
 
-    {{ component('PostForm', {
-        form: form
-    }) }}
+    {{ component('PostForm') }}
 
 Submitting the Form via a LiveAction
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
