@@ -178,6 +178,15 @@ let's keep going because… things get cooler.
 
 .. tip::
 
+    If you use the `Symfony MakerBundle`_, you can easily create a new component
+    with the ``make:twig-component`` command:
+
+    .. code-block:: terminal
+
+        $ php bin/console make:twig-component --live EditPost
+
+.. tip::
+
     Need to do some extra data initialization on your component? Create
     a ``mount()`` method or use the ``PostMount`` hook: `Twig Component mount documentation`_.
 
