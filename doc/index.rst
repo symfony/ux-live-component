@@ -243,7 +243,7 @@ LiveProps must be a value that can be sent to JavaScript. Supported values
 are scalars (int, float, string, bool, null), arrays (of scalar values), enums,
 DateTime objects, Doctrine entity objects, DTOs, or array of DTOs.
 
-See :ref:`hydration` for handling more complex data.
+See :ref:`hydration <hydration>` for handling more complex data.
 
 Data Binding
 ------------
