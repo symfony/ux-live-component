@@ -11,6 +11,7 @@
 
 namespace Symfony\UX\LiveComponent;
 
+use Symfony\Component\Form\ChoiceList\View\ChoiceGroupView;
 use Symfony\Component\Form\ClearableErrorsInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormView;
@@ -255,25 +256,39 @@ trait ComponentWithFormTrait
                 continue;
             }
 
+            // <input type="checkbox">
             if (\array_key_exists('checked', $child->vars)) {
-                // special handling for check boxes
                 $values[$name] = $child->vars['checked'] ? $child->vars['value'] : null;
                 continue;
             }
 
-            if (\array_key_exists('choices', $child->vars)
-                && $child->vars['required']
-                && !$child->vars['disabled']
-                && !$child->vars['value']
-                && (false === $child->vars['placeholder'] || null === $child->vars['placeholder'])
-                && !$child->vars['multiple']
-                && !$child->vars['expanded']
-                && $child->vars['choices']
+            // <select> - Simulate browser behavior
+            // When no option is selected, browsers send the value of the first
+            // option, when the following conditions are met:
+            if (
+                \array_key_exists('choices', $child->vars)
+                && $child->vars['choices']                  // has defined choices
+                && $child->vars['required']                 // is required
+                && !$child->vars['disabled']                // is not disabled
+                && '' === $child->vars['value']             // has no value set  ("0" can be a value)
+                && !array_diff_key(
+                    /* @see \Symfony\Component\Form\Extension\Core\Type\ChoiceType::buildView() */
+                    array_flip(['choices', 'expanded', 'multiple', 'placeholder', 'placeholder_in_choices', 'preferred_choices']),
+                    $child->vars,
+                )
+                && !$child->vars['expanded']                // is a <select>     (not a radio/checkbox)
+                && !$child->vars['multiple']                // is not multiple
+                && !\is_string($child->vars['placeholder'])  // has no placeholder (empty string is valid)
             ) {
-                if (null !== $firstKey = array_key_first($child->vars['choices'])) {
-                    $values[$name] = $child->vars['choices'][$firstKey]->value ?? null;
-                }
+                $choices = $child->vars['choices'];
+                do {
+                    $choice = $choices[array_key_first($choices)];
+                    if (!$choice instanceof ChoiceGroupView) {
+                        break;
+                    }
+                } while ($choices = $choice->choices);
 
+                $values[$name] = $choice?->value;
                 continue;
             }
 
