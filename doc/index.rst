@@ -3732,9 +3732,9 @@ uses Symfony's test client to render and make requests to your components::
                 ->set('count', 99)
             ;
 
-            // Submit form data
+            // Submit form data ('my_form' for your MyFormType form)
             $testComponent
-                ->submitForm(['form' => ['input' => 'value']], 'save');
+                ->submitForm(['my_form' => ['input' => 'value']], 'save');
 
             $this->assertStringContainsString('Count: 99', $testComponent->render());
 
