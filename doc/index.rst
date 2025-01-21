@@ -3689,6 +3689,9 @@ Test Helper
 
     The test helper was added in LiveComponents 2.11.
 
+Interact With Live-Components
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 For testing, you can use the ``InteractsWithLiveComponents`` trait which
 uses Symfony's test client to render and make requests to your components::
 
@@ -3774,6 +3777,54 @@ uses Symfony's test client to render and make requests to your components::
 
     The ``InteractsWithLiveComponents`` trait can only be used in tests that extend
     ``Symfony\Bundle\FrameworkBundle\Test\KernelTestCase``.
+
+Test LiveCollectionType
+~~~~~~~~~~~~~~~~~~~~~~~
+
+To test the submission of a form within a Live Component (with the above ``submitForm`` helper) containing a ``LiveCollectionType``, you first need to programmatically add the desired number of entries to the form, replicating the action of clicking the "Add" button.
+
+So, if the following are the forms used::
+
+    use Symfony\UX\LiveComponent\Form\Type\LiveCollectionType;
+
+    // Parent FormType used in the Live Component
+    class LiveCollectionFormType extends AbstractType
+    {
+        public function buildForm(FormBuilderInterface $builder, array $options): void
+        {
+            $builder->add('children', LiveCollectionType::class, [
+                    'entry_type' => ChildFormType::class,
+                ])
+            ;
+        }
+    }
+
+    // Child Form Type used for each entry in the collection
+    class ChildFormType extends AbstractType
+    {
+        public function buildForm(FormBuilderInterface $builder, array $options): void
+        {
+            $builder
+                ->add('name', TextType::class)
+                ->add('age', IntegerType::class)
+            ;
+        }
+    }
+
+Use the addCollectionItem method from the LiveCollectionTrait to dynamically add entries to the children field of the form before submitting it::
+
+    // Call the addCollectionItem method as many times as needed, specifying the name of the collection field.
+    $component->call('addCollectionItem', ['name' => 'children']);
+    $component->call('addCollectionItem', ['name' => 'children']);
+    //... can be called as many times as you need entries in your 'children' field
+
+    // ... then submit the form by providing data for all the fields in the ChildFormType for each added entry:
+    $component->submitForm([ 'live_collection_form' => [
+        'children' => [
+            ['name' => 'childName1', 'age' => 10],
+            ['name' => 'childName2', 'age' => 15],
+        ]
+    ]]);
 
 Backward Compatibility promise
 ------------------------------
