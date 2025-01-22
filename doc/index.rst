@@ -1335,23 +1335,12 @@ Currently, Live Components do not natively support returning file responses dire
 
 Create a LiveAction that generates the URL for the file download and returns a `RedirectResponse`::
 
-    use Symfony\Component\HttpFoundation\RedirectResponse;
-    use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-    use Symfony\UX\LiveComponent\Attribute\LiveAction;
-
-    // ...
-
-    class MyDownloadButton
-    {
-    // ...
-
         #[LiveAction]
         public function initiateDownload(UrlGeneratorInterface $urlGenerator): RedirectResponse
         {
             $url = $urlGenerator->generate('app_file_download');
             return new RedirectResponse($url);
         }
-    }
 
 .. code-block:: html+twig
 
@@ -3802,7 +3791,7 @@ uses Symfony's test client to render and make requests to your components::
             // authenticate a user ($user is instance of UserInterface)
             $testComponent->actingAs($user);
 
-            // set the '_locale' route parameter (if the component route is localized)  
+            // set the '_locale' route parameter (if the component route is localized)
             $testComponent->setRouteLocale('fr');
 
             // customize the test client
