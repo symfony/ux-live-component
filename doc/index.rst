@@ -1360,7 +1360,7 @@ Create a LiveAction that generates the URL for the file download and returns a `
             data-action="live#action"
             data-live-action-param="initiateDownload"
         >
-        Download
+            Download
         </button>
     </div>
 
