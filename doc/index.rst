@@ -1364,7 +1364,10 @@ Create a LiveAction that generates the URL for the file download and returns a `
         </button>
     </div>
 
-When Turbo is enabled, it will intercept the redirect and initiate a second request for the download URL. Adding `data-turbo="false"` ensures that the download URL is called only once.
+
+.. tip::
+
+    When Turbo is enabled, if a LiveAction response redirects to another URL, Turbo will make a request to prefetch the content. Here, adding ``data-turbo="false"`` ensures that the download URL is called only once.
 
 .. note::
 
