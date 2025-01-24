@@ -1358,10 +1358,6 @@ Create a LiveAction that generates the URL for the file download and returns a `
 
     When Turbo is enabled, if a LiveAction response redirects to another URL, Turbo will make a request to prefetch the content. Here, adding ``data-turbo="false"`` ensures that the download URL is called only once.
 
-.. note::
-
-   Native support for file downloads in Live Components is under development. For more details, refer to the related `pull request #2483 <https://github.com/symfony/ux/pull/2483>`_.
-
 
 .. _forms:
 
