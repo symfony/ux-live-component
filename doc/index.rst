@@ -1326,6 +1326,39 @@ The files will be available in a regular ``$request->files`` files bag::
     need to specify ``multiple`` attribute on HTML element and end ``name``
     with ``[]``.
 
+.. _downloads:
+
+Downloading files
+-----------------
+
+Currently, Live Components do not natively support returning file responses directly from a LiveAction. However, you can implement file downloads by redirecting to a route that handles the file response.
+
+Create a LiveAction that generates the URL for the file download and returns a `RedirectResponse`::
+
+        #[LiveAction]
+        public function initiateDownload(UrlGeneratorInterface $urlGenerator): RedirectResponse
+        {
+            $url = $urlGenerator->generate('app_file_download');
+            return new RedirectResponse($url);
+        }
+
+.. code-block:: html+twig
+
+    <div {{ attributes }} data-turbo="false">
+        <button
+            data-action="live#action"
+            data-live-action-param="initiateDownload"
+        >
+            Download
+        </button>
+    </div>
+
+
+.. tip::
+
+    When Turbo is enabled, if a LiveAction response redirects to another URL, Turbo will make a request to prefetch the content. Here, adding ``data-turbo="false"`` ensures that the download URL is called only once.
+
+
 .. _forms:
 
 Forms
