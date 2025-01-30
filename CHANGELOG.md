@@ -3,6 +3,7 @@
 ## 2.23.0
 
 -   Allow configuring the secret used to compute fingerprints and checksums.
+-   Prevent `__component` property to be serialized when called `JSON.stringify()`
 
 ## 2.22.0
 

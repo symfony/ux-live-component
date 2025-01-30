@@ -285,8 +285,10 @@ export default class LiveControllerDefault extends Controller<HTMLElement> imple
         );
         this.proxiedComponent = proxifyComponent(this.component);
 
-        // @ts-ignore Adding the dynamic property
-        this.element.__component = this.proxiedComponent;
+        Object.defineProperty(this.element, '__component', {
+            value: this.proxiedComponent,
+            writable: true,
+        });
 
         if (this.hasDebounceValue) {
             this.component.defaultDebounce = this.debounceValue;

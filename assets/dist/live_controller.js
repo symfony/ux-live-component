@@ -3059,7 +3059,10 @@ class LiveControllerDefault extends Controller {
         const id = this.element.id || null;
         this.component = new Component(this.element, this.nameValue, this.propsValue, this.listenersValue, id, LiveControllerDefault.backendFactory(this), new StimulusElementDriver(this));
         this.proxiedComponent = proxifyComponent(this.component);
-        this.element.__component = this.proxiedComponent;
+        Object.defineProperty(this.element, '__component', {
+            value: this.proxiedComponent,
+            writable: true,
+        });
         if (this.hasDebounceValue) {
             this.component.defaultDebounce = this.debounceValue;
         }
