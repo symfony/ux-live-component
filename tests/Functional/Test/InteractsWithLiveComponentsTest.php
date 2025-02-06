@@ -18,6 +18,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\UX\LiveComponent\Test\InteractsWithLiveComponents;
 use Symfony\UX\LiveComponent\Tests\Fixtures\Component\Component2;
 use Symfony\UX\LiveComponent\Tests\Fixtures\Factory\CategoryFixtureEntityFactory;
+use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
 /**
@@ -25,6 +26,7 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  */
 final class InteractsWithLiveComponentsTest extends KernelTestCase
 {
+    use Factories;
     use InteractsWithLiveComponents;
     use ResetDatabase;
 

@@ -14,6 +14,7 @@ namespace Symfony\UX\LiveComponent\Tests\Unit\Form;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\UX\LiveComponent\Tests\Fixtures\Component\FormComponentWithManyDifferentFieldsType;
 use Symfony\UX\LiveComponent\Tests\Fixtures\Factory\CategoryFixtureEntityFactory;
+use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
 /**
@@ -21,6 +22,7 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  */
 class ComponentWithFormTest extends KernelTestCase
 {
+    use Factories;
     use ResetDatabase;
 
     public function testFormValues(): void
