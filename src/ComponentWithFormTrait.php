@@ -135,19 +135,27 @@ trait ComponentWithFormTrait
     /**
      * Reset the form to its initial state, so it can be used again.
      */
-    private function resetForm(): void
+    private function resetForm(bool $soft = false): void
     {
         // prevent the system from trying to submit this reset form
         $this->shouldAutoSubmitForm = false;
         $this->form = null;
         $this->formView = null;
-        $this->formValues = $this->extractFormValues($this->getFormView());
+        if (true !== $soft) {
+            $this->formValues = $this->extractFormValues($this->getFormView());
+        }
     }
 
     private function submitForm(bool $validateAll = true): void
     {
         if (null !== $this->formView) {
-            throw new \LogicException('The submitForm() method is being called, but the FormView has already been built. Are you calling $this->getForm() - which creates the FormView - before submitting the form?');
+            // Two scenarios can cause this:
+            // 1) Not intended: form was already submitted and validated in the same main request.
+            // 2) Expected: form was submitted during a sub-request (e.g., a batch action).
+            //
+            // Before 2.23, both cases triggered an exception.
+            // Since 2.23, we reset the form (preserving its values) to handle case 2 correctly.
+            $this->resetForm(true);
         }
 
         $form = $this->getForm();
