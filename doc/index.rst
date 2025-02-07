@@ -1333,7 +1333,7 @@ Downloading files
 
 Currently, Live Components do not natively support returning file responses directly from a LiveAction. However, you can implement file downloads by redirecting to a route that handles the file response.
 
-Create a LiveAction that generates the URL for the file download and returns a `RedirectResponse`::
+Create a LiveAction that generates the URL for the file download and returns a ``RedirectResponse``::
 
         #[LiveAction]
         public function initiateDownload(UrlGeneratorInterface $urlGenerator): RedirectResponse
