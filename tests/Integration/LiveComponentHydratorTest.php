@@ -43,6 +43,7 @@ use Symfony\UX\LiveComponent\Tests\Fixtures\Enum\StringEnum;
 use Symfony\UX\LiveComponent\Tests\Fixtures\Enum\ZeroIntEnum;
 use Symfony\UX\LiveComponent\Tests\LiveComponentTestHelper;
 use Symfony\UX\TwigComponent\ComponentAttributes;
+use Symfony\UX\TwigComponent\ComponentAttributesFactory;
 use Symfony\UX\TwigComponent\ComponentMetadata;
 use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
@@ -75,6 +76,9 @@ final class LiveComponentHydratorTest extends KernelTestCase
         $metadataFactory = self::getContainer()->get('ux.live_component.metadata_factory');
         \assert($metadataFactory instanceof LiveComponentMetadataFactory);
         $testCase = $testBuilder->getTest($metadataFactory);
+        
+        $componentAttributesFactory = self::getContainer()->get('ux.twig_component.component_attributes_factory');
+        \assert($componentAttributesFactory instanceof ComponentAttributesFactory);
 
         // keep a copy of the original, empty component object for hydration later
         $originalComponentWithData = clone $testCase->component;
@@ -90,7 +94,7 @@ final class LiveComponentHydratorTest extends KernelTestCase
 
         $dehydratedProps = $this->hydrator()->dehydrate(
             $originalComponentWithData,
-            new ComponentAttributes([]), // not worried about testing these here
+            $componentAttributesFactory->create([]), // not worried about testing these here
             $liveMetadata,
         );
 
@@ -132,7 +136,7 @@ final class LiveComponentHydratorTest extends KernelTestCase
 
         $dehydratedProps2 = $this->hydrator()->dehydrate(
             $componentAfterHydration,
-            new ComponentAttributes([]), // not worried about testing these here
+            $componentAttributesFactory->create(),
             $liveMetadata,
         );
         $this->hydrator()->hydrate(
@@ -1449,7 +1453,7 @@ final class LiveComponentHydratorTest extends KernelTestCase
 
         $dehydratedProps = $this->hydrator()->dehydrate(
             $component,
-            new ComponentAttributes([]),
+            $this->createComponentAttributes(),
             $this->createLiveMetadata($component)
         );
 
@@ -1498,7 +1502,7 @@ final class LiveComponentHydratorTest extends KernelTestCase
         $this->expectExceptionMessageMatches('/Cannot dehydrate value typed as interface "Symfony\UX\LiveComponent\Tests\Fixtures\Dto\SimpleDtoInterface" on component ');
         $this->expectExceptionMessageMatches('/ Change this to a concrete type that can be dehydrated/');
 
-        $this->hydrator()->dehydrate($component, new ComponentAttributes([]), $this->createLiveMetadata($component));
+        $this->hydrator()->dehydrate($component, $this->createComponentAttributes(), $this->createLiveMetadata($component));
     }
 
     /**
@@ -1634,7 +1638,7 @@ final class LiveComponentHydratorTest extends KernelTestCase
         $liveMetadata = $this->createLiveMetadata($component);
         $dehydrated = $this->hydrator()->dehydrate(
             $component,
-            new ComponentAttributes([]),
+            $this->createComponentAttributes(),
             $liveMetadata
         );
         $updatedFromParentData = ['shouldUppercase' => true];
@@ -1665,7 +1669,7 @@ final class LiveComponentHydratorTest extends KernelTestCase
         $liveMetadata = $this->createLiveMetadata($component);
         $dehydrated = $this->hydrator()->dehydrate(
             $component,
-            new ComponentAttributes([]),
+            $this->createComponentAttributes(),
             $liveMetadata
         );
         $updatedFromParentData = ['name' => 'Kevin'];
@@ -1820,6 +1824,14 @@ final class LiveComponentHydratorTest extends KernelTestCase
         yield ['nullableBool', '', null];
         yield 'fooey-o-booey-todo' => ['nullableBool', '   ', null];
     }
+    
+    private function createComponentAttributes(array $attributes = []): ComponentAttributes
+    {
+        $factory = self::getContainer()->get('ux.twig_component.component_attributes_factory');
+        \assert($factory instanceof ComponentAttributesFactory);
+        
+        return $factory->create($attributes);
+    }  
 
     private function createLiveMetadata(object $component): LiveComponentMetadata
     {
