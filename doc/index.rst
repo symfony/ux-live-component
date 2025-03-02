@@ -83,6 +83,10 @@ needed if you're using AssetMapper):
     $ npm install --force
     $ npm run watch
 
+.. note::
+
+    For more complex installation scenarios, you can install the JavaScript assets through the `@symfony/ux-live-component npm package`_
+
 If your project is localized in different languages (either via the `locale route parameter`_
 or by `setting the locale in the request`_) add the ``{_locale}`` attribute to
 the UX Live Components route definition to keep the locale between re-renders:
@@ -3800,7 +3804,7 @@ uses Symfony's test client to render and make requests to your components::
             // authenticate a user ($user is instance of UserInterface)
             $testComponent->actingAs($user);
 
-            // set the '_locale' route parameter (if the component route is localized)  
+            // set the '_locale' route parameter (if the component route is localized)
             $testComponent->setRouteLocale('fr');
 
             // customize the test client
@@ -3902,3 +3906,4 @@ promise. However, any internal implementation in the JavaScript files
 .. _`locale route parameter`: https://symfony.com/doc/current/translation.html#the-locale-and-the-url
 .. _`setting the locale in the request`: https://symfony.com/doc/current/translation.html#translation-locale
 .. _`Stimulus action parameter`: https://stimulus.hotwired.dev/reference/actions#action-parameters
+.. _`@symfony/ux-live-component npm package`: https://www.npmjs.com/package/@symfony/ux-live-component
