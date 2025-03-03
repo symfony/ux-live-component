@@ -2776,6 +2776,16 @@ You can also pass extra (scalar) data to the listeners::
         ]);
     }
 
+From a Twig template:
+
+  .. code-block:: html+twig
+
+       <button
+           data-action="live#emit"
+           data-live-event-param="productAdded"
+           data-live-product-param="123"
+       >
+
 In your listeners, you can access this by adding a matching argument
 name with ``#[LiveArg]`` in front::
 
