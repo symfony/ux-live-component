@@ -74,6 +74,38 @@ class FormWithManyDifferentFieldsType extends AbstractType
                     'foo' => 1,
                 ],
             ])
+            ->add('choice_required_with_preferred_choices_array', ChoiceType::class, [
+                'choices' => [
+                    'Bar Group' => [
+                        'Bar Label' => 'ok',
+                        'Foo Label' => 'foo_value',
+                    ],
+                    'foo' => 1,
+                ],
+                'preferred_choices' => ['foo_value'],
+            ])
+            ->add('choice_required_with_preferred_choices_callback', ChoiceType::class, [
+                'choices' => [
+                    'Bar Group' => [
+                        'Bar Label' => 'ok',
+                        'Foo Label' => 'foo_value',
+                    ],
+                    'foo' => 1,
+                ],
+                'preferred_choices' => function ($choice): bool {
+                    return is_int($choice);
+                },
+            ])
+            ->add('choice_required_with_empty_preferred_choices', ChoiceType::class, [
+                'choices' => [
+                    'Bar Group' => [
+                        'Bar Label' => 'ok',
+                        'Foo Label' => 'foo_value',
+                    ],
+                    'foo' => 1,
+                ],
+                'preferred_choices' => [],
+            ])
             ->add('choice_expanded', ChoiceType::class, [
                 'choices' => [
                     'foo' => 1,
