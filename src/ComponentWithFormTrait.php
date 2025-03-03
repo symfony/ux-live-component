@@ -288,7 +288,7 @@ trait ComponentWithFormTrait
                 && !$child->vars['multiple']                // is not multiple
                 && !\is_string($child->vars['placeholder'])  // has no placeholder (empty string is valid)
             ) {
-                $choices = $child->vars['choices'];
+                $choices = $child->vars['preferred_choices'] ?: $child->vars['choices']; // preferred_choices has precedence, as they rendered before regular choices
                 do {
                     $choice = $choices[array_key_first($choices)];
                     if (!$choice instanceof ChoiceGroupView) {
