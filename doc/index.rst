@@ -1047,10 +1047,11 @@ Actions
 
 Live components require a single "default action" that is used to
 re-render it. By default, this is an empty ``__invoke()`` method and can
-be added with the ``DefaultActionTrait``. Live components are actually
-Symfony controllers so you can add the normal controller
-attributes/annotations (i.e. ``#[Cache]``/``#[Security]``) to either the
-entire class just a single action.
+be added with the ``DefaultActionTrait``. 
+
+Live components __are__ actually Symfony controllers so you can add
+controller attributes (i.e. ``#[IsGranted]``) to either the entire class
+just a single action.
 
 You can also trigger custom actions on your component. Let's pretend we
 want to add a "Reset Max" button to our "random number" component
