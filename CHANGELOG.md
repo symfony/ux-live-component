@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.26.0
+
+-   `LiveProp`: Pass the property name as second parameter of the `modifier` callable
+
 ## 2.25.0
 
 -   Add support for [Symfony UID](https://symfony.com/doc/current/components/uid.html) hydration/dehydration
