@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.25.0
+
+-   Add support for [Symfony UID](https://symfony.com/doc/current/components/uid.html) hydration/dehydration
+
 ## 2.23.0
 
 -   Allow configuring the secret used to compute fingerprints and checksums.
