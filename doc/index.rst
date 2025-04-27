@@ -3237,14 +3237,14 @@ Rendering Quirks with List of Elements
 
 If you're rendering a list of elements in your component, to help LiveComponents
 understand which element is which between re-renders (i.e. if something re-orders
-or removes some of those elements), you can add a ``id`` attribute to
+or removes some of those elements), you can add a ``key`` attribute to
 each element
 
 .. code-block:: html+twig
 
     {# templates/components/Invoice.html.twig #}
     {% for lineItem in lineItems %}
-        <div id="{{ lineItem.id }}">
+        <div key="{{ lineItem.id }}">
             {{ lineItem.name }}
         </div>
     {% endfor %}
@@ -3258,10 +3258,6 @@ Imagine your component renders a list of child components and
 the list changes as the user types into a search box... or by clicking
 "delete" on an item. In this case, the wrong children may be removed
 or existing child components may not disappear when they should.
-
-.. versionadded:: 2.8
-
-    The ``key`` prop was added in Symfony UX Live Component 2.8.
 
 To fix this, add a ``key`` prop to each child component that's unique
 to that component:
@@ -3277,9 +3273,7 @@ to that component:
     {% endfor %}
 
 The ``key`` will be used to generate an ``id`` attribute,
-which will be used to identify each child component. You can
-also pass in a ``id`` attribute directly, but ``key`` is
-a bit more convenient.
+which will be used to identify each child component.
 
 .. _rendering-loop-new-element:
 
