@@ -407,10 +407,6 @@ If you're building a form (:ref:`more on forms later <forms>`),
 instead of adding ``data-model`` to every field, you can instead
 rely on the ``name`` attribute.
 
-.. versionadded:: 2.3
-
-    The ``data-model`` attribute on the ``form`` is required since version 2.3.
-
 To activate this, you must add a ``data-model`` attribute to
 the ``<form>`` element:
 
@@ -549,10 +545,6 @@ changed, added or removed::
 Checkboxes, Select Elements Radios & Arrays
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. versionadded:: 2.8
-
-    The ability to use checkboxes to set boolean values was added in LiveComponent 2.8.
-
 Checkboxes can be used to set a boolean or an array of strings::
 
     #[AsLiveComponent]
@@ -605,10 +597,6 @@ single value or an array of values::
 
 LiveProp Date Formats
 ~~~~~~~~~~~~~~~~~~~~~
-
-.. versionadded:: 2.8
-
-    The ``format`` option was introduced in Live Components 2.8.
 
 If you have a writable ``LiveProp`` that is some sort of ``DateTime`` instance,
 you can control the format of the model on the frontend with the ``format``
@@ -716,10 +704,6 @@ make this work:
 
 Hydrating with the Serializer
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. versionadded:: 2.8
-
-    The ``useSerializerForHydration`` option was added in LiveComponent 2.8.
 
 To hydrate/dehydrate through Symfony's serializer, use the ``useSerializerForHydration``
 option::
@@ -1009,10 +993,6 @@ changes until loading has taken longer than a certain amount of time:
 Targeting Loading for a Specific Action
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. versionadded:: 2.5
-
-    The ``action()`` modifier was introduced in Live Components 2.5.
-
 To only toggle the loading behavior when a specific action is triggered,
 use the ``action()`` modifier with the name of the action - e.g. ``saveForm()``:
 
@@ -1025,10 +1005,6 @@ use the ``action()`` modifier with the name of the action - e.g. ``saveForm()``:
 
 Targeting Loading When a Specific Model Changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. versionadded:: 2.5
-
-    The ``model()`` modifier was introduced in Live Components 2.5.
 
 You can also toggle the loading behavior only if a specific model value
 was just changed using the ``model()`` modifier:
@@ -1051,7 +1027,7 @@ Actions
 
 Live components require a single "default action" that is used to
 re-render it. By default, this is an empty ``__invoke()`` method and can
-be added with the ``DefaultActionTrait``. 
+be added with the ``DefaultActionTrait``.
 
 Live components __are__ actually Symfony controllers so you can add
 controller attributes (i.e. ``#[IsGranted]``) to either the entire class
@@ -1897,10 +1873,6 @@ When the user clicks ``removeComment()``, a similar process happens.
 Using LiveCollectionType
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. versionadded:: 2.2
-
-    The ``LiveCollectionType`` and the ``LiveCollectionTrait`` was added in LiveComponent 2.2.
-
 The ``LiveCollectionType`` uses the same method described above, but in
 a generic way, so it needs even less code. This form type adds an 'Add'
 and a 'Delete' button for each row by default, which work out of the box
@@ -2697,10 +2669,6 @@ validated. To validate it, you have to set up a `PostMount hook`_::
 Communication Between Components: Emitting Events
 -------------------------------------------------
 
-.. versionadded:: 2.8
-
-    The ability to emit events was added in Live Components 2.8.
-
 Events allow you to communicate between any two components that live
 on your page.
 
@@ -2974,11 +2942,6 @@ todo items:
 Suppose the user updates the ``listName`` model and the parent component
 re-renders. In this case, the child component will *not* re-render by design:
 each component lives in its own universe.
-
-.. versionadded:: 2.8
-
-    The ``updateFromParent`` option was added in Live Components 2.8. Previously,
-    a child would re-render when *any* props passed into it changed.
 
 However, if the user adds a *new* todo item then we *do* want the ``TodoFooter``
 child component to re-render: using the new ``count`` value. To trigger this,
@@ -3496,10 +3459,6 @@ When a component re-renders, the new HTML is "morphed" onto the existing
 elements on the page. For example, if the re-render includes a new ``class``
 on an existing element, that class will be added to that element.
 
-.. versionadded:: 2.8
-
-    The smart re-render algorithm was introduced in LiveComponent 2.8.
-
 The rendering system is also smart enough to know when an element was changed
 by something *outside* of the LiveComponents system: e.g. some JavaScript
 that added a class to an element. In this case, the class will be preserved
@@ -3573,10 +3532,6 @@ In this case, any changes to the ``<select>`` element attributes will still be
 
 Define another route for your Component
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. versionadded:: 2.7
-
-    The ``route`` option  was added in LiveComponents 2.7.
 
 The default route for live components is ``/components/{_live_component}/{_live_action}``.
 Sometimes it may be useful to customize this URL - e.g. so that the component lives
