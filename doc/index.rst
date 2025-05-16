@@ -1051,7 +1051,7 @@ Actions
 
 Live components require a single "default action" that is used to
 re-render it. By default, this is an empty ``__invoke()`` method and can
-be added with the ``DefaultActionTrait``. 
+be added with the ``DefaultActionTrait``.
 
 Live components __are__ actually Symfony controllers so you can add
 controller attributes (i.e. ``#[IsGranted]``) to either the entire class
@@ -3447,14 +3447,14 @@ stages of a component's lifecycle, you can take advantage of lifecycle hooks.
 
 The ``#[PostHydrate]`` hook is called immediately after the component's state
 is loaded from the client. This is useful if you need to process or adjust
-the data once it’s been hydrated.
+the data once it's been hydrated.
 
 ``PreDehydrate`` Hook
 ~~~~~~~~~~~~~~~~~~~~~
 
-The ``#[PreDehydrate]`` hook is triggered just before your component’s state
+The ``#[PreDehydrate]`` hook is triggered just before your component's state
 is sent back to the client. You can use this to modify or clean up the data
-before it’s serialized and returned to the client.
+before it's serialized and returned to the client.
 
 ``PreReRender`` Hook
 ~~~~~~~~~~~~~~~~~~~~
