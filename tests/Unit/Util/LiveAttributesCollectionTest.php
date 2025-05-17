@@ -16,7 +16,7 @@ use Symfony\UX\LiveComponent\Util\LiveAttributesCollection;
 
 class LiveAttributesCollectionTest extends KernelTestCase
 {
-    public function testToEscapedArray(): void
+    public function testToArray(): void
     {
         self::bootKernel();
         $collection = new LiveAttributesCollection(self::getContainer()->get('twig'));
@@ -52,13 +52,13 @@ class LiveAttributesCollectionTest extends KernelTestCase
             'data-live-name-value' => 'my-component',
             'id' => 'the-live-id',
             'data-live-fingerprint-value' => 'the-fingerprint',
-            'data-live-props-value' => '&#x7B;&quot;the&quot;&#x3A;&quot;props&quot;&#x7D;',
+            'data-live-props-value' => '{"the":"props"}',
             'data-live-url-value' => 'the-live-url',
-            'data-live-listeners-value' => '&#x7B;&quot;event_name&quot;&#x3A;&quot;theActionName&quot;&#x7D;',
-            'data-live-events-to-emit-value' => '&#x5B;&#x7B;&quot;event&quot;&#x3A;&quot;event_name1&quot;,&quot;data&quot;&#x3A;&#x7B;&quot;the&quot;&#x3A;&quot;data&quot;&#x7D;,&quot;target&quot;&#x3A;&quot;up&quot;,&quot;componentName&quot;&#x3A;&quot;the-component&quot;&#x7D;,&#x7B;&quot;event&quot;&#x3A;&quot;event_name2&quot;,&quot;data&quot;&#x3A;&#x7B;&quot;the&quot;&#x3A;&quot;data&quot;&#x7D;,&quot;target&quot;&#x3A;null,&quot;componentName&quot;&#x3A;null&#x7D;&#x5D;',
-            'data-live-query-mapping-value' => '&#x7B;&quot;foo&quot;&#x3A;&#x7B;&quot;name&quot;&#x3A;&quot;foo&quot;&#x7D;,&quot;bar&quot;&#x3A;&#x7B;&quot;name&quot;&#x3A;&quot;bar&quot;&#x7D;&#x7D;',
+            'data-live-listeners-value' => '{"event_name":"theActionName"}',
+            'data-live-events-to-emit-value' => '[{"event":"event_name1","data":{"the":"data"},"target":"up","componentName":"the-component"},{"event":"event_name2","data":{"the":"data"},"target":null,"componentName":null}]',
+            'data-live-query-mapping-value' => '{"foo":{"name":"foo"},"bar":{"name":"bar"}}',
         ];
 
-        $this->assertSame($expected, $collection->toEscapedArray());
+        $this->assertSame($expected, $collection->toArray());
     }
 }
