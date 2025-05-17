@@ -16,7 +16,7 @@ use Twig\Extension\EscaperExtension;
 use Twig\Runtime\EscaperRuntime;
 
 /**
- * An array of attributes that can eventually be returned as an escaped array.
+ * A collection of HTML attributes useful for LiveComponent.
  *
  * @internal
  */
@@ -24,22 +24,18 @@ final class LiveAttributesCollection
 {
     private array $attributes = [];
 
-    public function __construct(private Environment $twig)
+    public function toArray(): array
     {
-    }
-
-    public function toEscapedArray(): array
-    {
-        $escaped = [];
+        $result = [];
         foreach ($this->attributes as $key => $value) {
             if (\is_array($value)) {
                 $value = JsonUtil::encodeObject($value);
             }
 
-            $escaped[$key] = $this->escapeAttribute($value);
+            $result[$key] = $value;
         }
 
-        return $escaped;
+        return $result;
     }
 
     public function setLiveController(string $componentName): void
@@ -106,19 +102,5 @@ final class LiveAttributesCollection
     public function setQueryUrlMapping(array $queryUrlMapping): void
     {
         $this->attributes['data-live-query-mapping-value'] = $queryUrlMapping;
-    }
-
-    private function escapeAttribute(string $value): string
-    {
-        if (class_exists(EscaperRuntime::class)) {
-            return $this->twig->getRuntime(EscaperRuntime::class)->escape($value, 'html_attr');
-        }
-
-        if (method_exists(EscaperExtension::class, 'escape')) {
-            return EscaperExtension::escape($this->twig, $value, 'html_attr');
-        }
-
-        // since twig/twig 3.9.0: Using the internal "twig_escape_filter" function is deprecated.
-        return (string) twig_escape_filter($this->twig, $value, 'html_attr');
     }
 }

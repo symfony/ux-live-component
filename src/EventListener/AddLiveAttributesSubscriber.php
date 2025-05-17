@@ -17,6 +17,7 @@ use Symfony\Contracts\Service\ServiceSubscriberInterface;
 use Symfony\UX\LiveComponent\Twig\TemplateMap;
 use Symfony\UX\LiveComponent\Util\LiveControllerAttributesCreator;
 use Symfony\UX\TwigComponent\ComponentAttributes;
+use Symfony\UX\TwigComponent\ComponentAttributesFactory;
 use Symfony\UX\TwigComponent\ComponentMetadata;
 use Symfony\UX\TwigComponent\ComponentStack;
 use Symfony\UX\TwigComponent\Event\PreRenderEvent;
@@ -36,6 +37,7 @@ final class AddLiveAttributesSubscriber implements EventSubscriberInterface, Ser
     public function __construct(
         private ComponentStack $componentStack,
         private TemplateMap $templateMap,
+        private readonly ComponentAttributesFactory $componentAttributesFactory,
         private ContainerInterface $container,
     ) {
     }
@@ -105,6 +107,6 @@ final class AddLiveAttributesSubscriber implements EventSubscriberInterface, Ser
             $this->componentStack->hasParentComponent()
         );
 
-        return new ComponentAttributes($attributesCollection->toEscapedArray());
+        return $this->componentAttributesFactory->create($attributesCollection->toArray());
     }
 }

@@ -15,6 +15,7 @@ use Psr\Container\ContainerInterface;
 use Symfony\Contracts\Service\ServiceSubscriberInterface;
 use Symfony\UX\LiveComponent\LiveComponentHydrator;
 use Symfony\UX\LiveComponent\Metadata\LiveComponentMetadataFactory;
+use Symfony\UX\TwigComponent\ComponentAttributesFactory;
 use Symfony\UX\TwigComponent\ComponentFactory;
 
 /**
@@ -27,6 +28,7 @@ class ChildComponentPartialRenderer implements ServiceSubscriberInterface
     public function __construct(
         private FingerprintCalculator $fingerprintCalculator,
         private TwigAttributeHelperFactory $attributeHelperFactory,
+        private ComponentAttributesFactory $componentAttributesFactory,
         private ContainerInterface $container,
     ) {
     }
@@ -43,7 +45,7 @@ class ChildComponentPartialRenderer implements ServiceSubscriberInterface
             $attributesCollection = $this->attributeHelperFactory->create();
             $attributesCollection->setLiveId($deterministicId);
 
-            return $this->createHtml($attributesCollection->toEscapedArray(), $childTag);
+            return $this->createHtml($attributesCollection->toArray(), $childTag);
         }
 
         /*
@@ -68,7 +70,7 @@ class ChildComponentPartialRenderer implements ServiceSubscriberInterface
         $readonlyDehydratedProps = $this->getLiveComponentHydrator()->addChecksumToData($readonlyDehydratedProps);
 
         $attributesCollection->setPropsUpdatedFromParent($readonlyDehydratedProps);
-        $attributes = $attributesCollection->toEscapedArray();
+        $attributes = $attributesCollection->toArray();
         // optional, but these just aren't needed by the frontend at this point
         unset($attributes['data-controller']);
         unset($attributes['data-live-url-value']);
@@ -82,13 +84,10 @@ class ChildComponentPartialRenderer implements ServiceSubscriberInterface
      */
     private function createHtml(array $attributes, string $childTag): string
     {
-        // transform attributes into an array of key="value" strings
-        $attributes = array_map(function ($key, $value) {
-            return \sprintf('%s="%s"', $key, $value);
-        }, array_keys($attributes), $attributes);
-        $attributes[] = 'data-live-preserve="true"';
+        $attributes['data-live-preserve'] = true;
+        $attributes = $this->componentAttributesFactory->create($attributes);
 
-        return \sprintf('<%s %s></%s>', $childTag, implode(' ', $attributes), $childTag);
+        return \sprintf('<%s%s></%s>', $childTag, $attributes, $childTag);
     }
 
     public static function getSubscribedServices(): array

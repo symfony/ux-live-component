@@ -31,8 +31,8 @@
         "symfony/property-access": "^5.4.5|^6.0|^7.0",
         "symfony/property-info": "^5.4|^6.0|^7.0",
         "symfony/stimulus-bundle": "^2.9",
-        "symfony/ux-twig-component": "^2.8",
-        "twig/twig": "^3.8.0"
+        "symfony/ux-twig-component": "^2.25",
+        "twig/twig": "^3.10.3"
     },
     "require-dev": {
         "doctrine/annotations": "^1.0",
