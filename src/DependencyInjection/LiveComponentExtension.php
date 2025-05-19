@@ -15,7 +15,6 @@ use Symfony\Component\AssetMapper\AssetMapperInterface;
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
-use Symfony\Component\DependencyInjection\Argument\AbstractArgument;
 use Symfony\Component\DependencyInjection\Argument\TaggedIteratorArgument;
 use Symfony\Component\DependencyInjection\ChildDefinition;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -110,7 +109,7 @@ final class LiveComponentExtension extends Extension implements PrependExtension
                 new Reference('ux.live_component.metadata_factory'),
                 new Reference('serializer', ContainerInterface::NULL_ON_INVALID_REFERENCE),
                 $config['secret'], // defaults to '%kernel.secret%'
-                new Reference('ux.twig_component.component_attributes_factory'),
+                new Reference('twig'),
             ])
         ;
 
@@ -158,7 +157,7 @@ final class LiveComponentExtension extends Extension implements PrependExtension
             ->setArguments([
                 new Reference('ux.live_component.fingerprint_calculator'),
                 new Reference('ux.live_component.attribute_helper_factory'),
-                new Reference('ux.twig_component.component_attributes_factory'),
+                new Reference('twig'),
             ])
             ->addTag('container.service_subscriber', ['key' => ComponentFactory::class, 'id' => 'ux.twig_component.component_factory'])
             ->addTag('container.service_subscriber', ['key' => LiveComponentMetadataFactory::class, 'id' => 'ux.live_component.metadata_factory'])
@@ -219,7 +218,7 @@ final class LiveComponentExtension extends Extension implements PrependExtension
             ->setArguments([
                 new Reference('ux.twig_component.component_stack'),
                 new Reference('ux.live_component.twig.template_mapper'),
-                new Reference('ux.twig_component.component_attributes_factory'),
+                new Reference('twig'),
             ])
             ->addTag('kernel.event_subscriber')
             ->addTag('container.service_subscriber', ['key' => LiveControllerAttributesCreator::class, 'id' => 'ux.live_component.live_controller_attributes_creator'])

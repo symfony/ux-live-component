@@ -20,7 +20,6 @@ use Symfony\UX\LiveComponent\Attribute\LiveProp;
 use Symfony\UX\LiveComponent\LiveComponentHydrator;
 use Symfony\UX\LiveComponent\Metadata\LiveComponentMetadataFactory;
 use Symfony\UX\LiveComponent\Metadata\LivePropMetadata;
-use Symfony\UX\TwigComponent\ComponentAttributesFactory;
 use Twig\Environment;
 
 final class LiveComponentHydratorTest extends TestCase
@@ -36,7 +35,7 @@ final class LiveComponentHydratorTest extends TestCase
             $this->createMock(LiveComponentMetadataFactory::class),
             $this->createMock(NormalizerInterface::class),
             '',
-            new ComponentAttributesFactory($this->createMock(Environment::class)),
+            $this->createMock(Environment::class),
         );
     }
 
@@ -48,7 +47,7 @@ final class LiveComponentHydratorTest extends TestCase
             $this->createMock(LiveComponentMetadataFactory::class),
             new Serializer(normalizers: [new ObjectNormalizer()]),
             'foo',
-            new ComponentAttributesFactory($this->createMock(Environment::class)),
+            $this->createMock(Environment::class),
         );
 
         $hydratedValue = $hydrator->hydrateValue(

@@ -15,8 +15,10 @@ use Psr\Container\ContainerInterface;
 use Symfony\Contracts\Service\ServiceSubscriberInterface;
 use Symfony\UX\LiveComponent\LiveComponentHydrator;
 use Symfony\UX\LiveComponent\Metadata\LiveComponentMetadataFactory;
-use Symfony\UX\TwigComponent\ComponentAttributesFactory;
+use Symfony\UX\TwigComponent\ComponentAttributes;
 use Symfony\UX\TwigComponent\ComponentFactory;
+use Twig\Environment;
+use Twig\Runtime\EscaperRuntime;
 
 /**
  * @author Ryan Weaver <ryan@symfonycasts.com>
@@ -28,7 +30,7 @@ class ChildComponentPartialRenderer implements ServiceSubscriberInterface
     public function __construct(
         private FingerprintCalculator $fingerprintCalculator,
         private TwigAttributeHelperFactory $attributeHelperFactory,
-        private ComponentAttributesFactory $componentAttributesFactory,
+        private Environment $twig,
         private ContainerInterface $container,
     ) {
     }
@@ -85,7 +87,7 @@ class ChildComponentPartialRenderer implements ServiceSubscriberInterface
     private function createHtml(array $attributes, string $childTag): string
     {
         $attributes['data-live-preserve'] = true;
-        $attributes = $this->componentAttributesFactory->create($attributes);
+        $attributes = new ComponentAttributes($attributes, $this->twig->getRuntime(EscaperRuntime::class));
 
         return \sprintf('<%s%s></%s>', $childTag, $attributes, $childTag);
     }

@@ -32,7 +32,8 @@ use Symfony\UX\LiveComponent\Metadata\LiveComponentMetadataFactory;
 use Symfony\UX\LiveComponent\Metadata\LivePropMetadata;
 use Symfony\UX\LiveComponent\Util\DehydratedProps;
 use Symfony\UX\TwigComponent\ComponentAttributes;
-use Symfony\UX\TwigComponent\ComponentAttributesFactory;
+use Twig\Environment;
+use Twig\Runtime\EscaperRuntime;
 
 /**
  * @author Kevin Bond <kevinbond@gmail.com>
@@ -53,7 +54,7 @@ final class LiveComponentHydrator
         private LiveComponentMetadataFactory $liveComponentMetadataFactory,
         private NormalizerInterface|DenormalizerInterface|null $serializer,
         #[\SensitiveParameter] private string $secret,
-        private readonly ComponentAttributesFactory $componentAttributesFactory,
+        private readonly Environment $twig,
     ) {
         if (!$secret) {
             throw new \InvalidArgumentException('A non-empty secret is required.');
@@ -146,7 +147,7 @@ final class LiveComponentHydrator
         $dehydratedOriginalProps = $this->combineAndValidateProps($props, $updatedPropsFromParent);
         $dehydratedUpdatedProps = DehydratedProps::createFromUpdatedArray($updatedProps);
 
-        $attributes = $this->componentAttributesFactory->create($dehydratedOriginalProps->getPropValue(self::ATTRIBUTES_KEY, []));
+        $attributes = new ComponentAttributes($dehydratedOriginalProps->getPropValue(self::ATTRIBUTES_KEY, []), $this->twig->getRuntime(EscaperRuntime::class));
         $dehydratedOriginalProps->removePropValue(self::ATTRIBUTES_KEY);
 
         $needProcessOnUpdatedHooks = [];
