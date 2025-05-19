@@ -43,8 +43,9 @@ use Symfony\UX\LiveComponent\Tests\Fixtures\Enum\StringEnum;
 use Symfony\UX\LiveComponent\Tests\Fixtures\Enum\ZeroIntEnum;
 use Symfony\UX\LiveComponent\Tests\LiveComponentTestHelper;
 use Symfony\UX\TwigComponent\ComponentAttributes;
-use Symfony\UX\TwigComponent\ComponentAttributesFactory;
 use Symfony\UX\TwigComponent\ComponentMetadata;
+use Twig\Environment;
+use Twig\Runtime\EscaperRuntime;
 use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
@@ -76,9 +77,9 @@ final class LiveComponentHydratorTest extends KernelTestCase
         $metadataFactory = self::getContainer()->get('ux.live_component.metadata_factory');
         \assert($metadataFactory instanceof LiveComponentMetadataFactory);
         $testCase = $testBuilder->getTest($metadataFactory);
-        
-        $componentAttributesFactory = self::getContainer()->get('ux.twig_component.component_attributes_factory');
-        \assert($componentAttributesFactory instanceof ComponentAttributesFactory);
+
+        $twig = self::getContainer()->get('twig');
+        \assert($twig instanceof Environment);
 
         // keep a copy of the original, empty component object for hydration later
         $originalComponentWithData = clone $testCase->component;
@@ -94,7 +95,7 @@ final class LiveComponentHydratorTest extends KernelTestCase
 
         $dehydratedProps = $this->hydrator()->dehydrate(
             $originalComponentWithData,
-            $componentAttributesFactory->create([]), // not worried about testing these here
+            new ComponentAttributes([], $twig->getRuntime(EscaperRuntime::class)), // not worried about testing these here
             $liveMetadata,
         );
 
@@ -136,7 +137,7 @@ final class LiveComponentHydratorTest extends KernelTestCase
 
         $dehydratedProps2 = $this->hydrator()->dehydrate(
             $componentAfterHydration,
-            $componentAttributesFactory->create(),
+            new ComponentAttributes([], $twig->getRuntime(EscaperRuntime::class)),
             $liveMetadata,
         );
         $this->hydrator()->hydrate(
@@ -1824,14 +1825,14 @@ final class LiveComponentHydratorTest extends KernelTestCase
         yield ['nullableBool', '', null];
         yield 'fooey-o-booey-todo' => ['nullableBool', '   ', null];
     }
-    
+
     private function createComponentAttributes(array $attributes = []): ComponentAttributes
     {
-        $factory = self::getContainer()->get('ux.twig_component.component_attributes_factory');
-        \assert($factory instanceof ComponentAttributesFactory);
-        
-        return $factory->create($attributes);
-    }  
+        $twig = self::getContainer()->get('twig');
+        \assert($twig instanceof Environment);
+
+        return new ComponentAttributes($attributes, $twig->getRuntime(EscaperRuntime::class));
+    }
 
     private function createLiveMetadata(object $component): LiveComponentMetadata
     {

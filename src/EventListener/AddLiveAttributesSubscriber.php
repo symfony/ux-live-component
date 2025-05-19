@@ -17,11 +17,12 @@ use Symfony\Contracts\Service\ServiceSubscriberInterface;
 use Symfony\UX\LiveComponent\Twig\TemplateMap;
 use Symfony\UX\LiveComponent\Util\LiveControllerAttributesCreator;
 use Symfony\UX\TwigComponent\ComponentAttributes;
-use Symfony\UX\TwigComponent\ComponentAttributesFactory;
 use Symfony\UX\TwigComponent\ComponentMetadata;
 use Symfony\UX\TwigComponent\ComponentStack;
 use Symfony\UX\TwigComponent\Event\PreRenderEvent;
 use Symfony\UX\TwigComponent\MountedComponent;
+use Twig\Environment;
+use Twig\Runtime\EscaperRuntime;
 
 /**
  * Adds the extra attributes needed to activate a live controller.
@@ -37,7 +38,7 @@ final class AddLiveAttributesSubscriber implements EventSubscriberInterface, Ser
     public function __construct(
         private ComponentStack $componentStack,
         private TemplateMap $templateMap,
-        private readonly ComponentAttributesFactory $componentAttributesFactory,
+        private readonly Environment $twig,
         private ContainerInterface $container,
     ) {
     }
@@ -107,6 +108,6 @@ final class AddLiveAttributesSubscriber implements EventSubscriberInterface, Ser
             $this->componentStack->hasParentComponent()
         );
 
-        return $this->componentAttributesFactory->create($attributesCollection->toArray());
+        return new ComponentAttributes($attributesCollection->toArray(), $this->twig->getRuntime(EscaperRuntime::class));
     }
 }
