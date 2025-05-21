@@ -208,6 +208,8 @@ Let's make our component more flexible by adding a ``$max`` property::
     #[AsLiveComponent]
     class RandomNumber
     {
+        use DefaultActionTrait;
+
         #[LiveProp]
         public int $max = 1000;
 
