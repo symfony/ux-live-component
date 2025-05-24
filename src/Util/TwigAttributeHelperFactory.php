@@ -11,8 +11,6 @@
 
 namespace Symfony\UX\LiveComponent\Util;
 
-use Twig\Environment;
-
 /**
  * Helper for building an array of attributes for the live controller element.
  *

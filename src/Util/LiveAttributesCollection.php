@@ -11,10 +11,6 @@
 
 namespace Symfony\UX\LiveComponent\Util;
 
-use Twig\Environment;
-use Twig\Extension\EscaperExtension;
-use Twig\Runtime\EscaperRuntime;
-
 /**
  * A collection of HTML attributes useful for LiveComponent.
  *

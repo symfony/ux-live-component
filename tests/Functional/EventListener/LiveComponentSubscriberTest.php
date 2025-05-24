@@ -12,8 +12,6 @@
 namespace Symfony\UX\LiveComponent\Tests\Functional\EventListener;
 
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Symfony\Component\DomCrawler\Crawler;
-use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\Security\Core\User\InMemoryUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\UX\LiveComponent\Tests\Fixtures\Entity\Entity1;
