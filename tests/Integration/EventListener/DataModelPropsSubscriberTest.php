@@ -12,7 +12,6 @@
 namespace Symfony\UX\LiveComponent\Tests\Integration\EventListener;
 
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\UX\LiveComponent\Tests\LiveComponentTestHelper;
 use Symfony\UX\TwigComponent\ComponentRenderer;
 
