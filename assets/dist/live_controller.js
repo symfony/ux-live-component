@@ -549,8 +549,8 @@ var HookManager_default = class {
   }
 };
 
-// ../../../node_modules/.pnpm/idiomorph@0.3.0/node_modules/idiomorph/dist/idiomorph.esm.js
-var Idiomorph = function() {
+// node_modules/idiomorph/dist/idiomorph.esm.js
+var Idiomorph = (function() {
   "use strict";
   let EMPTY_SET = /* @__PURE__ */ new Set();
   let defaults = {
@@ -1093,7 +1093,7 @@ var Idiomorph = function() {
     morph,
     defaults
   };
-}();
+})();
 
 // src/normalize_attributes_for_comparison.ts
 function normalizeAttributesForComparison(element) {
@@ -2389,7 +2389,13 @@ var LazyPlugin_default = class {
 
 // src/Component/plugins/LoadingPlugin.ts
 var LoadingPlugin_default = class {
+  constructor() {
+    this.actionMap = /* @__PURE__ */ new Map();
+  }
   attachToComponent(component) {
+    component.on("request:started", (requestConfig) => {
+      this.requestStarting(requestConfig);
+    });
     component.on("loading.state:started", (element, request) => {
       this.startLoading(component, element, request);
     });
@@ -2398,11 +2404,22 @@ var LoadingPlugin_default = class {
     });
     this.finishLoading(component, component.element);
   }
+  requestStarting(requestConfig) {
+    requestConfig.actions.forEach((action, index) => {
+      const dashPosition = action.name.indexOf("-");
+      if (dashPosition !== -1) {
+        const actionPrefix = action.name.slice(0, dashPosition);
+        this.actionMap.set(actionPrefix, action.name);
+        requestConfig.actions[index].name = actionPrefix;
+      }
+    });
+  }
   startLoading(component, targetElement, backendRequest) {
     this.handleLoadingToggle(component, true, targetElement, backendRequest);
   }
   finishLoading(component, targetElement) {
     this.handleLoadingToggle(component, false, targetElement, null);
+    this.actionMap.clear();
   }
   handleLoadingToggle(component, isLoading, targetElement, backendRequest) {
     if (isLoading) {
@@ -2439,7 +2456,8 @@ var LoadingPlugin_default = class {
           `The "action" in data-loading must have an action name - e.g. action(foo). It's missing for "${directive.getString()}"`
         );
       }
-      targetedActions.push(modifier.value);
+      const mappedAction = this.actionMap.get(modifier.value) || modifier.value;
+      targetedActions.push(mappedAction);
     });
     validModifiers.set("model", (modifier) => {
       if (!modifier.value) {
@@ -2460,8 +2478,12 @@ var LoadingPlugin_default = class {
         `Unknown modifier "${modifier.name}" used in data-loading="${directive.getString()}". Available modifiers are: ${Array.from(validModifiers.keys()).join(", ")}.`
       );
     });
-    if (isLoading && targetedActions.length > 0 && backendRequest && !backendRequest.containsOneOfActions(targetedActions)) {
-      return;
+    if (isLoading && targetedActions.length > 0 && backendRequest) {
+      const actions = backendRequest.actions.map((action) => this.actionMap.get(action) || action);
+      const containsOneOfActions = actions.some((action) => targetedActions.includes(action));
+      if (!containsOneOfActions) {
+        return;
+      }
     }
     if (isLoading && targetedModels.length > 0 && backendRequest && !backendRequest.areAnyModelsUpdated(targetedModels)) {
       return;

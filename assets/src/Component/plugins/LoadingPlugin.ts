@@ -11,7 +11,12 @@ interface ElementLoadingDirectives {
 }
 
 export default class implements PluginInterface {
+    private actionMap: Map<string, string> = new Map<string, string>();
+
     attachToComponent(component: Component): void {
+        component.on('request:started', (requestConfig: any) => {
+            this.requestStarting(requestConfig);
+        });
         component.on('loading.state:started', (element: HTMLElement, request: BackendRequest) => {
             this.startLoading(component, element, request);
         });
@@ -23,12 +28,27 @@ export default class implements PluginInterface {
         this.finishLoading(component, component.element);
     }
 
+    requestStarting(requestConfig: any): void {
+        requestConfig.actions.forEach((action, index) => {
+            const dashPosition = action.name.indexOf('-');
+            if (dashPosition !== -1) {
+                const actionPrefix = action.name.slice(0, dashPosition);
+
+                this.actionMap.set(actionPrefix, action.name);
+
+                requestConfig.actions[index].name = actionPrefix
+            }
+        });
+    }
+
     startLoading(component: Component, targetElement: HTMLElement | SVGElement, backendRequest: BackendRequest): void {
         this.handleLoadingToggle(component, true, targetElement, backendRequest);
     }
 
     finishLoading(component: Component, targetElement: HTMLElement | SVGElement): void {
         this.handleLoadingToggle(component, false, targetElement, null);
+
+        this.actionMap.clear();
     }
 
     private handleLoadingToggle(
@@ -82,7 +102,10 @@ export default class implements PluginInterface {
                     `The "action" in data-loading must have an action name - e.g. action(foo). It's missing for "${directive.getString()}"`
                 );
             }
-            targetedActions.push(modifier.value);
+
+            const mappedAction = this.actionMap.get(modifier.value) || modifier.value;
+
+            targetedActions.push(mappedAction);
         });
         validModifiers.set('model', (modifier: DirectiveModifier) => {
             if (!modifier.value) {
@@ -108,13 +131,13 @@ export default class implements PluginInterface {
         });
 
         // if loading is being activated + action modifier, only apply if the action is on the request
-        if (
-            isLoading &&
-            targetedActions.length > 0 &&
-            backendRequest &&
-            !backendRequest.containsOneOfActions(targetedActions)
-        ) {
-            return;
+        if (isLoading && targetedActions.length > 0 && backendRequest) {
+            const actions = backendRequest.actions.map((action) => this.actionMap.get(action) || action);
+            const containsOneOfActions = actions.some((action) => targetedActions.includes(action));
+
+            if (!containsOneOfActions) {
+                return;
+            }
         }
 
         // if loading is being activated + model modifier, only apply if the model is modified
